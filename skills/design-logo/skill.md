@@ -37,7 +37,7 @@ Options:
   --resolution 32|64    Pixel grid per emoji (default: 32)
   --format png|svg      Output format (default: png)
   --font path.ttf       Custom font override
-  --sprites-dir path/   Custom sprite PNGs (named by codepoint)
+  --sprites-dir path/   Custom sprite PNGs (named by emoji sequence codepoints)
 ```
 
 ## Examples

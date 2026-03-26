@@ -5,14 +5,16 @@ use std::path::Path;
 const DEFAULT_FONT: &[u8] = include_bytes!("../fonts/PressStart2P-Regular.ttf");
 
 /// Load font from path or use bundled default
-pub fn load_font(custom_path: Option<&Path>) -> Font {
+pub fn load_font(custom_path: Option<&Path>) -> Result<Font, String> {
     match custom_path {
         Some(path) => {
-            let data = std::fs::read(path).expect("Failed to read font file");
-            Font::from_bytes(data, FontSettings::default()).expect("Failed to parse font")
+            let data = std::fs::read(path)
+                .map_err(|err| format!("failed to read font file {}: {err}", path.display()))?;
+            Font::from_bytes(data, FontSettings::default())
+                .map_err(|err| format!("failed to parse font {}: {err}", path.display()))
         }
         None => Font::from_bytes(DEFAULT_FONT, FontSettings::default())
-            .expect("Failed to parse bundled font"),
+            .map_err(|err| format!("failed to parse bundled font: {err}")),
     }
 }
 

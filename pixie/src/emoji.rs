@@ -1,22 +1,70 @@
 use image::{Rgba, RgbaImage, imageops};
 use resvg::tiny_skia::Pixmap;
 use resvg::usvg;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
-/// Get the codepoint hex string for an emoji character
-pub fn emoji_codepoint(ch: char) -> String {
-    format!("{:x}", ch as u32)
+include!(concat!(env!("OUT_DIR"), "/embedded_emoji.rs"));
+
+/// Get the bundled filename stem for an emoji sequence.
+pub fn emoji_codepoint(emoji: &str) -> String {
+    emoji
+        .chars()
+        .map(|ch| format!("{:x}", ch as u32))
+        .collect::<Vec<_>>()
+        .join("-")
 }
 
-/// Split an emoji string into individual emoji characters
-/// Handles multi-codepoint emojis by treating each char individually for now
-pub fn split_emojis(emojis: &str) -> Vec<char> {
-    emojis.chars().filter(|c| !c.is_ascii()).collect()
+/// Split an emoji string into display sequences.
+pub fn split_emojis(emojis: &str) -> Vec<String> {
+    let chars: Vec<char> = emojis.chars().collect();
+    let mut out = Vec::new();
+    let mut i = 0;
+
+    while i < chars.len() {
+        let ch = chars[i];
+        if ch.is_whitespace() {
+            i += 1;
+            continue;
+        }
+
+        let mut sequence = String::new();
+        sequence.push(ch);
+        i += 1;
+
+        if is_regional_indicator(ch) {
+            if i < chars.len() && is_regional_indicator(chars[i]) {
+                sequence.push(chars[i]);
+                i += 1;
+            }
+            out.push(sequence);
+            continue;
+        }
+
+        loop {
+            while i < chars.len() && is_sequence_modifier(chars[i]) {
+                sequence.push(chars[i]);
+                i += 1;
+            }
+
+            if i + 1 < chars.len() && chars[i] == '\u{200D}' {
+                sequence.push(chars[i]);
+                sequence.push(chars[i + 1]);
+                i += 2;
+                continue;
+            }
+
+            break;
+        }
+
+        out.push(sequence);
+    }
+
+    out
 }
 
 /// Try to load a custom sprite for an emoji
-pub fn load_custom_sprite(ch: char, sprites_dir: &Path, resolution: u32) -> Option<RgbaImage> {
-    let codepoint = emoji_codepoint(ch);
+pub fn load_custom_sprite(emoji: &str, sprites_dir: &Path, resolution: u32) -> Option<RgbaImage> {
+    let codepoint = emoji_codepoint(emoji);
     let sprite_path = sprites_dir.join(format!("{}.png", codepoint));
     if sprite_path.exists() {
         let img = image::open(&sprite_path).ok()?.into_rgba8();
@@ -26,11 +74,10 @@ pub fn load_custom_sprite(ch: char, sprites_dir: &Path, resolution: u32) -> Opti
     }
 }
 
-/// Render an emoji from its SVG file, pixelate to target resolution
-pub fn render_emoji_from_svg(svg_path: &Path, resolution: u32) -> Option<RgbaImage> {
-    let svg_data = std::fs::read(svg_path).ok()?;
+/// Render an emoji from SVG data, pixelate to target resolution
+pub fn render_emoji_from_svg(svg_data: &[u8], resolution: u32) -> Option<RgbaImage> {
     let options = usvg::Options::default();
-    let tree = usvg::Tree::from_data(&svg_data, &options).ok()?;
+    let tree = usvg::Tree::from_data(svg_data, &options).ok()?;
 
     // Render at the target resolution directly
     let mut pixmap = Pixmap::new(resolution, resolution)?;
@@ -88,43 +135,59 @@ pub fn render_emoji_from_svg(svg_path: &Path, resolution: u32) -> Option<RgbaIma
     Some(outlined)
 }
 
-/// Find the bundled SVG for an emoji character
-pub fn bundled_svg_path(ch: char) -> PathBuf {
-    let codepoint = emoji_codepoint(ch);
-    // Look relative to the executable, then fall back to compile-time path
-    let exe_dir = std::env::current_exe()
-        .ok()
-        .and_then(|p| p.parent().map(|p| p.to_path_buf()));
-
-    if let Some(dir) = exe_dir {
-        let path = dir.join("emoji-svg").join(format!("{}.svg", codepoint));
-        if path.exists() {
-            return path;
-        }
-    }
-
-    // Fallback: relative to Cargo manifest dir (works with `cargo run`)
-    let manifest_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("emoji-svg")
-        .join(format!("{}.svg", codepoint));
-    if manifest_path.exists() {
-        return manifest_path;
-    }
-
-    // Last resort: relative to cwd
-    PathBuf::from(format!("emoji-svg/{}.svg", codepoint))
+/// Find bundled SVG data for an emoji sequence.
+pub fn bundled_svg(emoji: &str) -> Option<&'static str> {
+    let codepoint = emoji_codepoint(emoji);
+    bundled_svg_data(&codepoint)
 }
 
 /// Render a single emoji: try custom sprite first, then bundled SVG
-pub fn render_emoji(ch: char, resolution: u32, sprites_dir: Option<&Path>) -> Option<RgbaImage> {
+pub fn render_emoji(emoji: &str, resolution: u32, sprites_dir: Option<&Path>) -> Option<RgbaImage> {
     // Try custom sprite first
     if let Some(dir) = sprites_dir {
-        if let Some(img) = load_custom_sprite(ch, dir, resolution) {
+        if let Some(img) = load_custom_sprite(emoji, dir, resolution) {
             return Some(img);
         }
     }
 
     // Fall back to bundled SVG
-    let svg_path = bundled_svg_path(ch);
-    render_emoji_from_svg(&svg_path, resolution)
+    let svg_data = bundled_svg(emoji)?;
+    render_emoji_from_svg(svg_data.as_bytes(), resolution)
+}
+
+fn is_regional_indicator(ch: char) -> bool {
+    matches!(ch as u32, 0x1F1E6..=0x1F1FF)
+}
+
+fn is_sequence_modifier(ch: char) -> bool {
+    matches!(
+        ch as u32,
+        0xFE0E | 0xFE0F | 0x20E3 | 0x1F3FB..=0x1F3FF | 0xE0020..=0xE007F
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{bundled_svg, emoji_codepoint, split_emojis};
+
+    #[test]
+    fn splits_zwj_sequence_as_one_emoji() {
+        assert_eq!(split_emojis("👨‍👩‍👧‍👦"), vec!["👨‍👩‍👧‍👦"]);
+    }
+
+    #[test]
+    fn splits_flag_sequence_as_one_emoji() {
+        assert_eq!(split_emojis("🇫🇷"), vec!["🇫🇷"]);
+    }
+
+    #[test]
+    fn builds_codepoint_names_for_sequences() {
+        assert_eq!(emoji_codepoint("🇫🇷"), "1f1eb-1f1f7");
+        assert_eq!(emoji_codepoint("👨‍👩‍👧‍👦"), "1f468-200d-1f469-200d-1f467-200d-1f466");
+    }
+
+    #[test]
+    fn finds_bundled_svg_for_flag_sequence() {
+        assert!(bundled_svg("🇫🇷").is_some());
+    }
 }
