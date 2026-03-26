@@ -66,7 +66,15 @@ pub fn bundled_svg_path(ch: char) -> PathBuf {
         }
     }
 
-    // Fallback: relative to cwd
+    // Fallback: relative to Cargo manifest dir (works with `cargo run`)
+    let manifest_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("emoji-svg")
+        .join(format!("{}.svg", codepoint));
+    if manifest_path.exists() {
+        return manifest_path;
+    }
+
+    // Last resort: relative to cwd
     PathBuf::from(format!("emoji-svg/{}.svg", codepoint))
 }
 
