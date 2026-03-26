@@ -2,6 +2,7 @@ use clap::Parser;
 use std::path::PathBuf;
 
 mod emoji;
+mod text;
 
 #[derive(Parser)]
 #[command(name = "pixie", about = "Emoji-to-pixel-art logo generator")]
@@ -47,5 +48,11 @@ fn main() {
             Some(img) => println!("  {} -> {}x{}", ch, img.width(), img.height()),
             None => eprintln!("  {} -> FAILED (missing SVG?)", ch),
         }
+    }
+
+    if let Some(ref label) = cli.text {
+        let font = text::load_font(cli.font.as_deref());
+        let text_img = text::render_text(label, &font, cli.resolution as f32 * 0.5);
+        println!("Text '{}' -> {}x{}", label, text_img.width(), text_img.height());
     }
 }
