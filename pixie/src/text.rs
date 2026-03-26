@@ -58,11 +58,9 @@ pub fn render_text(text: &str, font: &Font, pixel_size: f32, color: [u8; 3]) -> 
         let descent = -metrics.ymin;
         max_ascent = max_ascent.max(ascent);
         max_descent = max_descent.max(descent);
-        // Use actual glyph width + 1px gap instead of font advance to avoid
-        // uneven spacing on narrow characters like "i" and "t"
-        let tight_advance = (metrics.xmin + metrics.width as i32 + 1) as u32;
-        total_width += tight_advance;
-        glyphs.push((metrics, bitmap, tight_advance));
+        let advance = metrics.advance_width.ceil() as u32;
+        total_width += advance;
+        glyphs.push((metrics, bitmap, advance));
     }
 
     // Canvas at native size — no outline yet
@@ -72,10 +70,14 @@ pub fn render_text(text: &str, font: &Font, pixel_size: f32, color: [u8; 3]) -> 
 
     let baseline_y = max_ascent;
 
-    // Draw glyphs in foreground color at native size
+    // Draw glyphs centered within their monospace cell
     let mut x = 0i32;
-    for (metrics, bitmap, tight_advance) in &glyphs {
-        let gx = x + metrics.xmin;
+    for (metrics, bitmap, advance) in &glyphs {
+        // Center the glyph horizontally within its cell
+        let cell_width = *advance as i32;
+        let glyph_width = metrics.xmin + metrics.width as i32;
+        let x_pad = (cell_width - glyph_width) / 2;
+        let gx = x + metrics.xmin + x_pad;
         let gy = baseline_y - metrics.height as i32 - metrics.ymin;
         for row in 0..metrics.height {
             for col in 0..metrics.width {
@@ -88,7 +90,7 @@ pub fn render_text(text: &str, font: &Font, pixel_size: f32, color: [u8; 3]) -> 
                 }
             }
         }
-        x += *tight_advance as i32;
+        x += cell_width;
     }
 
     // Scale up with nearest-neighbor for crisp pixels
