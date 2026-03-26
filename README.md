@@ -10,6 +10,8 @@ Design logos for DuckEight tools using pixel art emojis and text.
 
 ## Pixie CLI
 
+![pixie](logos/pixie-logo.png)
+
 Emoji-to-pixel-art logo generator.
 
 ### Install
