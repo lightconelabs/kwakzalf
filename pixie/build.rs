@@ -14,7 +14,9 @@ fn main() {
     collect_svg_entries(&emoji_dir, &mut entries);
     entries.sort();
 
-    let mut generated = String::from("pub fn bundled_svg_data(name: &str) -> Option<&'static str> {\n    match name {\n");
+    let mut generated = String::from(
+        "pub fn bundled_svg_data(name: &str) -> Option<&'static str> {\n    match name {\n",
+    );
     for entry in entries {
         generated.push_str("        \"");
         generated.push_str(&entry.0);

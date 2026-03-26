@@ -1,4 +1,4 @@
-![kwakzalf](logos/kwakzalf-logo.svg)
+![kwakzalf](logos/kwakzalf-logo.png)
 
 Agent skills plugin for Claude Code, Codex, and OpenCode.
 

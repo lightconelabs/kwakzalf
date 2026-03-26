@@ -80,11 +80,15 @@ fn main() -> Result<(), String> {
     }
 
     // Render text
-    let text_img = cli.text.as_ref().map(|label| {
-        let font = text::load_font(cli.font.as_deref())?;
-        let font_size = cli.resolution as f32 * 0.5;
-        Ok::<_, String>(text::render_text(label, &font, font_size, cli.color))
-    }).transpose()?;
+    let text_img = cli
+        .text
+        .as_ref()
+        .map(|label| {
+            let font = text::load_font(cli.font.as_deref())?;
+            let font_size = cli.resolution as f32 * 0.5;
+            Ok::<_, String>(text::render_text(label, &font, font_size, cli.color))
+        })
+        .transpose()?;
 
     // Compose
     let padding = cli.resolution / 4;
@@ -95,13 +99,23 @@ fn main() -> Result<(), String> {
         OutputFormat::Png => {
             logo.save(&cli.output)
                 .map_err(|err| format!("failed to save PNG {}: {err}", cli.output.display()))?;
-            println!("Saved PNG: {:?} ({}x{})", cli.output, logo.width(), logo.height());
+            println!(
+                "Saved PNG: {:?} ({}x{})",
+                cli.output,
+                logo.width(),
+                logo.height()
+            );
         }
         OutputFormat::Svg => {
             let svg = png_to_svg(&logo);
             std::fs::write(&cli.output, svg)
                 .map_err(|err| format!("failed to save SVG {}: {err}", cli.output.display()))?;
-            println!("Saved SVG: {:?} ({}x{})", cli.output, logo.width(), logo.height());
+            println!(
+                "Saved SVG: {:?} ({}x{})",
+                cli.output,
+                logo.width(),
+                logo.height()
+            );
         }
     }
 
@@ -122,9 +136,12 @@ fn parse_hex_color(hex: &str) -> Result<[u8; 3], String> {
         return Err("color must be a 6-digit hex value like ffffff".to_string());
     }
 
-    let r = u8::from_str_radix(&hex[0..2], 16).map_err(|_| "invalid red channel in color".to_string())?;
-    let g = u8::from_str_radix(&hex[2..4], 16).map_err(|_| "invalid green channel in color".to_string())?;
-    let b = u8::from_str_radix(&hex[4..6], 16).map_err(|_| "invalid blue channel in color".to_string())?;
+    let r = u8::from_str_radix(&hex[0..2], 16)
+        .map_err(|_| "invalid red channel in color".to_string())?;
+    let g = u8::from_str_radix(&hex[2..4], 16)
+        .map_err(|_| "invalid green channel in color".to_string())?;
+    let b = u8::from_str_radix(&hex[4..6], 16)
+        .map_err(|_| "invalid blue channel in color".to_string())?;
     Ok([r, g, b])
 }
 

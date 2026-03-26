@@ -86,7 +86,8 @@ pub fn render_text(text: &str, font: &Font, pixel_size: f32, color: [u8; 3]) -> 
                 if bitmap[row * metrics.width + col] > 128 {
                     let fx = gx + col as i32;
                     let fy = gy + row as i32;
-                    if fx >= 0 && fy >= 0 && (fx as u32) < img.width() && (fy as u32) < img.height() {
+                    if fx >= 0 && fy >= 0 && (fx as u32) < img.width() && (fy as u32) < img.height()
+                    {
                         img.put_pixel(fx as u32, fy as u32, color);
                     }
                 }

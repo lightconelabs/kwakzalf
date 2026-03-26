@@ -1,4 +1,4 @@
-use image::{Rgba, RgbaImage, imageops};
+use image::{imageops, Rgba, RgbaImage};
 use resvg::tiny_skia::Pixmap;
 use resvg::usvg;
 use std::path::Path;
@@ -68,7 +68,12 @@ pub fn load_custom_sprite(emoji: &str, sprites_dir: &Path, resolution: u32) -> O
     let sprite_path = sprites_dir.join(format!("{}.png", codepoint));
     if sprite_path.exists() {
         let img = image::open(&sprite_path).ok()?.into_rgba8();
-        Some(imageops::resize(&img, resolution, resolution, imageops::FilterType::Nearest))
+        Some(imageops::resize(
+            &img,
+            resolution,
+            resolution,
+            imageops::FilterType::Nearest,
+        ))
     } else {
         None
     }
@@ -99,7 +104,7 @@ pub fn render_emoji_from_svg(svg_data: &[u8], resolution: u32) -> Option<RgbaIma
             pixel.0 = [0, 0, 0, 0]; // fully transparent
         } else {
             pixel.0[3] = 255; // fully opaque
-            // Quantize each color channel to reduce gradients (snap to 8 levels)
+                              // Quantize each color channel to reduce gradients (snap to 8 levels)
             for c in 0..3 {
                 pixel.0[c] = (pixel.0[c] / 32) * 32 + 16;
             }
@@ -120,7 +125,11 @@ pub fn render_emoji_from_svg(svg_data: &[u8], resolution: u32) -> Option<RgbaIma
                     for dx in 0..=2i32 {
                         let ox = x as i32 + dx - 1 + 1; // +1 for canvas offset
                         let oy = y as i32 + dy - 1 + 1;
-                        if ox >= 0 && oy >= 0 && (ox as u32) < outlined.width() && (oy as u32) < outlined.height() {
+                        if ox >= 0
+                            && oy >= 0
+                            && (ox as u32) < outlined.width()
+                            && (oy as u32) < outlined.height()
+                        {
                             outlined.put_pixel(ox as u32, oy as u32, black);
                         }
                     }
@@ -183,7 +192,10 @@ mod tests {
     #[test]
     fn builds_codepoint_names_for_sequences() {
         assert_eq!(emoji_codepoint("🇫🇷"), "1f1eb-1f1f7");
-        assert_eq!(emoji_codepoint("👨‍👩‍👧‍👦"), "1f468-200d-1f469-200d-1f467-200d-1f466");
+        assert_eq!(
+            emoji_codepoint("👨‍👩‍👧‍👦"),
+            "1f468-200d-1f469-200d-1f467-200d-1f466"
+        );
     }
 
     #[test]
