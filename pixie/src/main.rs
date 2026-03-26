@@ -32,6 +32,10 @@ struct Cli {
     #[arg(long)]
     sprites_dir: Option<PathBuf>,
 
+    /// Text color as hex (e.g. "ffffff" for white, "f4a030" for yellow)
+    #[arg(long, default_value = "ffffff")]
+    color: String,
+
     /// Output file path
     #[arg(short, long)]
     output: PathBuf,
@@ -53,11 +57,14 @@ fn main() {
         })
         .collect();
 
+    // Parse text color
+    let color = parse_hex_color(&cli.color);
+
     // Render text
     let text_img = cli.text.as_ref().map(|label| {
         let font = text::load_font(cli.font.as_deref());
         let font_size = cli.resolution as f32 * 0.5;
-        text::render_text(label, &font, font_size)
+        text::render_text(label, &font, font_size, color)
     });
 
     // Compose
@@ -87,6 +94,14 @@ fn main() {
         }
         _ => eprintln!("Unknown format: {}", cli.format),
     }
+}
+
+fn parse_hex_color(hex: &str) -> [u8; 3] {
+    let hex = hex.trim_start_matches('#');
+    let r = u8::from_str_radix(&hex[0..2], 16).unwrap_or(255);
+    let g = u8::from_str_radix(&hex[2..4], 16).unwrap_or(255);
+    let b = u8::from_str_radix(&hex[4..6], 16).unwrap_or(255);
+    [r, g, b]
 }
 
 /// Convert an RGBA image to SVG by drawing each non-transparent pixel as a rect
