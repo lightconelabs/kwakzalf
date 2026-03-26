@@ -16,14 +16,34 @@ pub fn load_font(custom_path: Option<&Path>) -> Font {
     }
 }
 
+/// Find the smallest size at which the font renders cleanly on its pixel grid.
+/// Pixel fonts have discrete sizes where glyphs snap to grid — we find the smallest one
+/// that fits within our target pixel_size.
+fn detect_native_size(font: &Font, max_size: f32) -> f32 {
+    let mut prev_height = 0;
+    for size_int in 4..=(max_size as u32) {
+        let size = size_int as f32;
+        let (metrics, _) = font.rasterize('M', size);
+        let h = metrics.height;
+        if h > 0 && h == prev_height && size_int > 6 {
+            // Height stopped growing — previous size was the native grid
+            return (size_int - 1) as f32;
+        }
+        prev_height = h;
+    }
+    // No grid detected — use the target size directly (non-pixel font)
+    max_size
+}
+
 /// Render text to an RgbaImage with the given font at pixel_size and color.
 /// Renders at 8px native size (Press Start 2P's design grid) then scales up.
 pub fn render_text(text: &str, font: &Font, pixel_size: f32, color: [u8; 3]) -> RgbaImage {
     let color = Rgba([color[0], color[1], color[2], 255]);
     let black = Rgba([0, 0, 0, 255]);
 
-    // Render at native 8px grid for crisp pixel font
-    let native_size = 8.0f32;
+    // Detect native pixel size: rasterize 'M' at increasing sizes until height jumps,
+    // indicating we've left the font's native grid. Default to pixel_size if no grid found.
+    let native_size = detect_native_size(font, pixel_size);
     let scale = (pixel_size / native_size).round().max(1.0) as u32;
 
     // Rasterize all glyphs at native size
@@ -38,53 +58,41 @@ pub fn render_text(text: &str, font: &Font, pixel_size: f32, color: [u8; 3]) -> 
         let descent = -metrics.ymin;
         max_ascent = max_ascent.max(ascent);
         max_descent = max_descent.max(descent);
-        total_width += metrics.advance_width.ceil() as u32;
-        glyphs.push((metrics, bitmap));
+        // Use actual glyph width + 1px gap instead of font advance to avoid
+        // uneven spacing on narrow characters like "i" and "t"
+        let tight_advance = (metrics.xmin + metrics.width as i32 + 1) as u32;
+        total_width += tight_advance;
+        glyphs.push((metrics, bitmap, tight_advance));
     }
 
-    // Canvas at native size with 1px margin for outline
-    let margin = 1u32;
-    let native_h = (max_ascent + max_descent) as u32 + margin * 2;
-    let native_w = total_width + margin * 2;
+    // Canvas at native size — no outline yet
+    let native_h = (max_ascent + max_descent) as u32;
+    let native_w = total_width;
     let mut img = RgbaImage::new(native_w.max(1), native_h.max(1));
 
-    let baseline_y = margin as i32 + max_ascent;
+    let baseline_y = max_ascent;
 
-    // Draw function: places each glyph's bitmap at given offsets
-    let draw = |img: &mut RgbaImage, offsets: &[(i32, i32)], px: Rgba<u8>| {
-        let mut x = margin as i32;
-        for (metrics, bitmap) in &glyphs {
-            let gx = x + metrics.xmin;
-            let gy = baseline_y - metrics.height as i32 - metrics.ymin;
-            for row in 0..metrics.height {
-                for col in 0..metrics.width {
-                    if bitmap[row * metrics.width + col] > 128 {
-                        for &(dx, dy) in offsets {
-                            let fx = gx + col as i32 + dx;
-                            let fy = gy + row as i32 + dy;
-                            if fx >= 0 && fy >= 0 && (fx as u32) < img.width() && (fy as u32) < img.height() {
-                                img.put_pixel(fx as u32, fy as u32, px);
-                            }
-                        }
+    // Draw glyphs in foreground color at native size
+    let mut x = 0i32;
+    for (metrics, bitmap, tight_advance) in &glyphs {
+        let gx = x + metrics.xmin;
+        let gy = baseline_y - metrics.height as i32 - metrics.ymin;
+        for row in 0..metrics.height {
+            for col in 0..metrics.width {
+                if bitmap[row * metrics.width + col] > 128 {
+                    let fx = gx + col as i32;
+                    let fy = gy + row as i32;
+                    if fx >= 0 && fy >= 0 && (fx as u32) < img.width() && (fy as u32) < img.height() {
+                        img.put_pixel(fx as u32, fy as u32, color);
                     }
                 }
             }
-            x += metrics.advance_width.ceil() as i32;
         }
-    };
-
-    // Black outline in 8 directions
-    let outline_offsets: Vec<(i32, i32)> = (-1..=1i32)
-        .flat_map(|dx| (-1..=1i32).map(move |dy| (dx, dy)))
-        .filter(|&(dx, dy)| dx != 0 || dy != 0)
-        .collect();
-    draw(&mut img, &outline_offsets, black);
-
-    // Foreground text on top
-    draw(&mut img, &[(0, 0)], color);
+        x += *tight_advance as i32;
+    }
 
     // Scale up with nearest-neighbor for crisp pixels
-    if scale > 1 {
+    let scaled = if scale > 1 {
         imageops::resize(
             &img,
             img.width() * scale,
@@ -93,5 +101,32 @@ pub fn render_text(text: &str, font: &Font, pixel_size: f32, color: [u8; 3]) -> 
         )
     } else {
         img
+    };
+
+    // Add 1px black outline on the scaled image
+    let sw = scaled.width();
+    let sh = scaled.height();
+    let mut outlined = RgbaImage::new(sw + 2, sh + 2);
+
+    // Draw black in 8 neighbors of each opaque pixel
+    for y in 0..sh {
+        for x in 0..sw {
+            if scaled.get_pixel(x, y).0[3] > 0 {
+                for dy in 0..=2u32 {
+                    for dx in 0..=2u32 {
+                        let ox = x + dx;
+                        let oy = y + dy;
+                        if ox < outlined.width() && oy < outlined.height() {
+                            outlined.put_pixel(ox, oy, black);
+                        }
+                    }
+                }
+            }
+        }
     }
+
+    // Draw scaled text on top (offset by 1 for the outline margin)
+    imageops::overlay(&mut outlined, &scaled, 1, 1);
+
+    outlined
 }
