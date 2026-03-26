@@ -1,6 +1,8 @@
 use clap::Parser;
 use std::path::PathBuf;
 
+mod emoji;
+
 #[derive(Parser)]
 #[command(name = "pixie", about = "Emoji-to-pixel-art logo generator")]
 struct Cli {
@@ -35,6 +37,15 @@ struct Cli {
 
 fn main() {
     let cli = Cli::parse();
-    println!("Emojis: {}, Text: {:?}, Resolution: {}, Format: {}, Output: {:?}",
-        cli.emojis, cli.text, cli.resolution, cli.format, cli.output);
+
+    let chars = emoji::split_emojis(&cli.emojis);
+    println!("Rendering {} emojis at {}x{}", chars.len(), cli.resolution, cli.resolution);
+
+    for ch in &chars {
+        let sprites = cli.sprites_dir.as_deref();
+        match emoji::render_emoji(*ch, cli.resolution, sprites) {
+            Some(img) => println!("  {} -> {}x{}", ch, img.width(), img.height()),
+            None => eprintln!("  {} -> FAILED (missing SVG?)", ch),
+        }
+    }
 }
