@@ -28,6 +28,16 @@ pixie --emojis "<chosen-emojis>" --text "<tool-name>" --resolution 64 --format s
 5. **Show the result** to the user (read the PNG file to display it)
 6. **Iterate** if needed — adjust emojis, resolution, or font
 
+## Prerequisites
+
+The `pixie` CLI must be installed. Build it from the plugin source:
+
+```bash
+cd ${CLAUDE_PLUGIN_ROOT}/pixie && cargo build --release
+```
+
+The binary will be at `${CLAUDE_PLUGIN_ROOT}/pixie/target/release/pixie`.
+
 ## Pixie CLI Reference
 
 ```

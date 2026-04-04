@@ -1,0 +1,25 @@
+{
+  "name": "kwakzalf",
+  "owner": {
+    "name": "Lightcone Labs",
+    "email": "info@lightconelabs.com"
+  },
+  "metadata": {
+    "description": "Agent skills for DuckEight tools",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "kwakzalf",
+      "source": ".",
+      "description": "Logo design with pixel art emojis using the pixie CLI",
+      "version": "0.1.0",
+      "author": {
+        "name": "Lightcone Labs"
+      },
+      "license": "MIT",
+      "category": "design",
+      "tags": ["pixel-art", "logo", "emoji", "duckeight"]
+    }
+  ]
+}
