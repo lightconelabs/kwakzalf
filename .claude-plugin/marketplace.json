@@ -1,17 +1,15 @@
 {
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "kwakzalf",
   "owner": {
     "name": "Lightcone Labs",
     "email": "info@lightconelabs.com"
   },
-  "metadata": {
-    "description": "Agent skills for DuckEight tools",
-    "version": "1.0.0"
-  },
+  "description": "Agent skills for DuckEight tools — logo design with pixel art emojis",
   "plugins": [
     {
       "name": "kwakzalf",
-      "source": ".",
+      "source": "./",
       "description": "Logo design with pixel art emojis using the pixie CLI",
       "version": "0.1.0",
       "author": {
