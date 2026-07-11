@@ -6,6 +6,11 @@ Emoji-to-pixel-art logo generator.
 
 Bundled emoji SVG assets and the default pixel font are compiled into the binary, so `cargo install --path .` produces a self-contained executable.
 
+Emoji artwork is [Noto Emoji](https://github.com/googlefonts/noto-emoji) (SIL OFL 1.1),
+with a few Twemoji fallbacks (CC-BY 4.0). Apple's emoji are proprietary and not
+bundled — to use genuine Apple artwork locally, export it as PNG sprites and pass
+`--sprites-dir` (see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)).
+
 ## Install
 
 ```bash

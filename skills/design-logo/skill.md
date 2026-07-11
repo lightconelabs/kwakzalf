@@ -19,6 +19,11 @@ You are designing a logo for a DuckEight tool. All DuckEight logos follow these 
 - **Pixelated emoji (optional):** `--emoji-pixelate true` renders the emoji as
   pixel art too, for one all-pixel aesthetic. Use it for simple, bold emoji;
   fine-detail ones read better crisp (the default).
+- **Emoji artwork:** bundled emoji are Noto Emoji (detailed, shaded — the closest
+  freely-licensable match to Apple's style). Apple's own emoji are proprietary
+  and can't be bundled; to use genuine Apple artwork on your own machine, export
+  the glyphs as PNGs named by codepoint and pass `--sprites-dir` (see
+  `pixie/THIRD_PARTY_NOTICES.md`).
 
 ## Process
 

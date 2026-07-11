@@ -1,1 +1,21 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36"><path fill="#009E49" d="M4 5C1.791 5 0 6.791 0 9v15.323L26.496 5H4z"/><path fill="#CE1126" d="M32 31c2.209 0 4-1.791 4-4V11.186L8.767 31H32z"/><path fill="#FCD116" d="M26.496 5L0 24.323v1.874L29.066 5zM8.767 31L36 11.186V9.312L6.197 31z"/><path fill="#141414" d="M32 5h-2.934L0 26.197V27c0 2.209 1.791 4 4 4h2.197L36 9.312V9c0-2.209-1.791-4-4-4z"/><path d="M27.152 9.729l-2.074 1.513-2.079-1.505.798 2.439-2.074 1.513 2.567-.005.797 2.44.789-2.443 2.567-.004-2.08-1.505zM13.185 19.915l-2.074 1.513-2.079-1.505.798 2.439-2.074 1.513 2.567-.005.797 2.44.789-2.443 2.567-.004-2.08-1.505z" fill="#FFF"/></svg>
+<?xml version="1.0" standalone="no"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="750" height="500">
+<defs>
+</defs>
+<path d="M750,0H0V500" fill="#009e49"/>
+<path d="M0,500H750V0" fill="#ce1126"/>
+<path d="M0,500 750,0" stroke="#fcd116" stroke-width="210"/>
+<path d="M0,500 750,0" stroke="#000" stroke-width="150"/>
+<!-- Rotation angle should be -arctan(2/3) -->
+<g id="star" transform="translate(517.5,155) rotate(-33.69)" fill="#fff">
+<g id="c">
+<path id="t" d="M0,-70V0H35" transform="rotate(18,0,-70)"/>
+<use xlink:href="#t" transform="scale(-1,1)"/>
+</g>
+<use xlink:href="#c" transform="rotate(72)"/>
+<use xlink:href="#c" transform="rotate(144)"/>
+<use xlink:href="#c" transform="rotate(216)"/>
+<use xlink:href="#c" transform="rotate(288)"/>
+</g>
+<use xlink:href="#star" transform="translate(-285,190)"/>
+</svg>
