@@ -6,24 +6,42 @@ mod compose;
 mod emoji;
 mod text;
 
+use compose::BadgeStyle;
+
 #[derive(Parser)]
-#[command(name = "pixie", about = "Emoji-to-pixel-art logo generator")]
+#[command(name = "pixie", about = "Emoji logo generator")]
 struct Cli {
-    /// Emoji characters to render
+    /// Emoji characters to render (two work best with the domino badge)
     #[arg(long)]
     emojis: String,
 
-    /// Text to render next to emojis
+    /// Text to render next to the emojis
     #[arg(long)]
     text: Option<String>,
 
-    /// Pixel grid resolution per emoji (32 or 64)
-    #[arg(long, default_value_t = 32, value_parser = parse_resolution)]
-    resolution: u32,
+    /// Emoji box size in pixels
+    #[arg(long, default_value_t = 150)]
+    size: u32,
 
-    /// Output format: png or svg
-    #[arg(long, default_value_t = OutputFormat::Png, value_enum)]
-    format: OutputFormat,
+    /// House the emoji in a domino tile
+    #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
+    badge: bool,
+
+    /// Badge tile fill color as hex (divider/border auto-contrast)
+    #[arg(long, default_value = "f9f7f1", value_parser = parse_hex_color)]
+    badge_fill: [u8; 3],
+
+    /// Text color as hex
+    #[arg(long, default_value = "ffffff", value_parser = parse_hex_color)]
+    color: [u8; 3],
+
+    /// Text size as a fraction of the emoji box height
+    #[arg(long, default_value_t = 0.72)]
+    text_scale: f32,
+
+    /// Extra letter spacing between glyphs, in pixels
+    #[arg(long, default_value_t = 0)]
+    tracking: i32,
 
     /// Custom font path for text
     #[arg(long)]
@@ -33,9 +51,9 @@ struct Cli {
     #[arg(long)]
     sprites_dir: Option<PathBuf>,
 
-    /// Text color as hex (e.g. "ffffff" for white, "f4a030" for yellow)
-    #[arg(long, default_value = "ffffff", value_parser = parse_hex_color)]
-    color: [u8; 3],
+    /// Output format: png or svg
+    #[arg(long, default_value_t = OutputFormat::Png, value_enum)]
+    format: OutputFormat,
 
     /// Output file path
     #[arg(short, long)]
@@ -64,11 +82,10 @@ fn main() -> Result<(), String> {
         return Err("no emoji sequences found in --emojis".to_string());
     }
 
-    // Render emojis
     let emoji_images: Vec<_> = chars
         .iter()
         .filter_map(|ch| {
-            let img = emoji::render_emoji(ch, cli.resolution, cli.sprites_dir.as_deref());
+            let img = emoji::render_emoji(ch, cli.size, cli.sprites_dir.as_deref());
             if img.is_none() {
                 eprintln!("Warning: could not render emoji {}", ch);
             }
@@ -79,55 +96,37 @@ fn main() -> Result<(), String> {
         return Err("could not render any of the requested emoji sequences".to_string());
     }
 
-    // Render text
     let text_img = cli
         .text
         .as_ref()
         .map(|label| {
             let font = text::load_font(cli.font.as_deref())?;
-            let font_size = cli.resolution as f32 * 0.5;
-            Ok::<_, String>(text::render_text(label, &font, font_size, cli.color))
+            let size = (cli.size as f32 * cli.text_scale).max(6.0);
+            Ok::<_, String>(text::render_text(label, &font, size, cli.color, cli.tracking))
         })
         .transpose()?;
 
-    // Compose
-    let padding = cli.resolution / 4;
-    let logo = compose::compose_horizontal(&emoji_images, text_img.as_ref(), padding);
+    // Gap between the mark and the text scales with the emoji size.
+    let padding = (cli.size as f32 * 0.28).round() as u32;
+    let logo = if cli.badge {
+        let badge = BadgeStyle { fill: cli.badge_fill };
+        compose::compose_domino(&emoji_images, text_img.as_ref(), padding, &badge)
+    } else {
+        compose::compose_horizontal(&emoji_images, text_img.as_ref(), padding)
+    };
 
-    // Output
     match cli.format {
         OutputFormat::Png => {
             logo.save(&cli.output)
                 .map_err(|err| format!("failed to save PNG {}: {err}", cli.output.display()))?;
-            println!(
-                "Saved PNG: {:?} ({}x{})",
-                cli.output,
-                logo.width(),
-                logo.height()
-            );
         }
         OutputFormat::Svg => {
-            let svg = png_to_svg(&logo);
-            std::fs::write(&cli.output, svg)
+            std::fs::write(&cli.output, png_to_svg(&logo))
                 .map_err(|err| format!("failed to save SVG {}: {err}", cli.output.display()))?;
-            println!(
-                "Saved SVG: {:?} ({}x{})",
-                cli.output,
-                logo.width(),
-                logo.height()
-            );
         }
     }
-
+    println!("Saved {:?} ({}x{})", cli.output, logo.width(), logo.height());
     Ok(())
-}
-
-fn parse_resolution(raw: &str) -> Result<u32, String> {
-    match raw.parse::<u32>() {
-        Ok(32 | 64) => raw.parse::<u32>().map_err(|err| err.to_string()),
-        Ok(_) => Err("resolution must be 32 or 64".to_string()),
-        Err(err) => Err(format!("invalid resolution: {err}")),
-    }
 }
 
 fn parse_hex_color(hex: &str) -> Result<[u8; 3], String> {
@@ -135,50 +134,48 @@ fn parse_hex_color(hex: &str) -> Result<[u8; 3], String> {
     if hex.len() != 6 {
         return Err("color must be a 6-digit hex value like ffffff".to_string());
     }
-
-    let r = u8::from_str_radix(&hex[0..2], 16)
-        .map_err(|_| "invalid red channel in color".to_string())?;
-    let g = u8::from_str_radix(&hex[2..4], 16)
-        .map_err(|_| "invalid green channel in color".to_string())?;
-    let b = u8::from_str_radix(&hex[4..6], 16)
-        .map_err(|_| "invalid blue channel in color".to_string())?;
-    Ok([r, g, b])
+    let channel = |i: usize| u8::from_str_radix(&hex[i..i + 2], 16);
+    match (channel(0), channel(2), channel(4)) {
+        (Ok(r), Ok(g), Ok(b)) => Ok([r, g, b]),
+        _ => Err("color has invalid hex digits".to_string()),
+    }
 }
 
-/// Convert an RGBA image to SVG by drawing each non-transparent pixel as a rect
+/// Wrap the rendered image in an SVG as a base64-embedded PNG — compact,
+/// lossless, and scalable (a per-pixel-rect SVG would be many megabytes).
 fn png_to_svg(img: &image::RgbaImage) -> String {
-    let mut svg = format!(
-        r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {} {}" shape-rendering="crispEdges">"#,
-        img.width(),
-        img.height()
-    );
-    svg.push('\n');
+    let mut png = Vec::new();
+    image::DynamicImage::ImageRgba8(img.clone())
+        .write_to(&mut std::io::Cursor::new(&mut png), image::ImageFormat::Png)
+        .expect("failed to encode PNG for SVG");
+    format!(
+        r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}" width="{w}" height="{h}"><image width="{w}" height="{h}" href="data:image/png;base64,{b64}"/></svg>"#,
+        w = img.width(),
+        h = img.height(),
+        b64 = base64_encode(&png),
+    )
+}
 
-    for y in 0..img.height() {
-        for x in 0..img.width() {
-            let px = img.get_pixel(x, y);
-            if px.0[3] > 0 {
-                svg.push_str(&format!(
-                    r#"<rect x="{}" y="{}" width="1" height="1" fill="rgba({},{},{},{:.2})"/>"#,
-                    x,
-                    y,
-                    px.0[0],
-                    px.0[1],
-                    px.0[2],
-                    px.0[3] as f32 / 255.0
-                ));
-                svg.push('\n');
-            }
-        }
+/// Minimal standard base64 encoder (avoids a dependency).
+fn base64_encode(data: &[u8]) -> String {
+    const TABLE: &[u8; 64] =
+        b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut out = String::with_capacity(data.len().div_ceil(3) * 4);
+    for chunk in data.chunks(3) {
+        let n = (chunk[0] as u32) << 16
+            | (*chunk.get(1).unwrap_or(&0) as u32) << 8
+            | (*chunk.get(2).unwrap_or(&0) as u32);
+        out.push(TABLE[(n >> 18 & 63) as usize] as char);
+        out.push(TABLE[(n >> 12 & 63) as usize] as char);
+        out.push(if chunk.len() > 1 { TABLE[(n >> 6 & 63) as usize] as char } else { '=' });
+        out.push(if chunk.len() > 2 { TABLE[(n & 63) as usize] as char } else { '=' });
     }
-
-    svg.push_str("</svg>");
-    svg
+    out
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{parse_hex_color, parse_resolution};
+    use super::parse_hex_color;
 
     #[test]
     fn rejects_short_hex_colors() {
@@ -188,15 +185,5 @@ mod tests {
     #[test]
     fn parses_six_digit_hex_colors() {
         assert_eq!(parse_hex_color("#f4a030").unwrap(), [0xf4, 0xa0, 0x30]);
-    }
-
-    #[test]
-    fn rejects_unsupported_resolutions() {
-        assert!(parse_resolution("1").is_err());
-    }
-
-    #[test]
-    fn accepts_supported_resolutions() {
-        assert_eq!(parse_resolution("64").unwrap(), 64);
     }
 }

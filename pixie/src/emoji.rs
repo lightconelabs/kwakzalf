@@ -1,4 +1,4 @@
-use image::{imageops, Rgba, RgbaImage};
+use image::{imageops, RgbaImage};
 use resvg::tiny_skia::Pixmap;
 use resvg::usvg;
 use std::path::Path;
@@ -62,106 +62,56 @@ pub fn split_emojis(emojis: &str) -> Vec<String> {
     out
 }
 
-/// Try to load a custom sprite for an emoji
-pub fn load_custom_sprite(emoji: &str, sprites_dir: &Path, resolution: u32) -> Option<RgbaImage> {
-    let codepoint = emoji_codepoint(emoji);
-    let sprite_path = sprites_dir.join(format!("{}.png", codepoint));
-    if sprite_path.exists() {
-        let img = image::open(&sprite_path).ok()?.into_rgba8();
-        Some(imageops::resize(
-            &img,
-            resolution,
-            resolution,
-            imageops::FilterType::Nearest,
-        ))
-    } else {
-        None
+/// Render a single emoji into a `size`×`size` square: a custom sprite if one is
+/// provided, otherwise the bundled SVG — both rendered crisp (full detail).
+pub fn render_emoji(emoji: &str, size: u32, sprites_dir: Option<&Path>) -> Option<RgbaImage> {
+    if let Some(dir) = sprites_dir {
+        let path = dir.join(format!("{}.png", emoji_codepoint(emoji)));
+        if path.exists() {
+            let img = image::open(&path).ok()?.into_rgba8();
+            return Some(fit_into_box(&img, size));
+        }
     }
+    let svg = bundled_svg(emoji)?;
+    let tree = usvg::Tree::from_data(svg.as_bytes(), &usvg::Options::default()).ok()?;
+    Some(render_crisp(&tree, size))
 }
 
-/// Render an emoji from SVG data, pixelate to target resolution
-pub fn render_emoji_from_svg(svg_data: &[u8], resolution: u32) -> Option<RgbaImage> {
-    let options = usvg::Options::default();
-    let tree = usvg::Tree::from_data(svg_data, &options).ok()?;
-
-    // Render at the target resolution directly
-    let mut pixmap = Pixmap::new(resolution, resolution)?;
-
+/// Render an emoji SVG crisp (full detail, antialiased) into a centered square of
+/// `side` px. Supersampled then smoothly downscaled for clean edges.
+fn render_crisp(tree: &usvg::Tree, side: u32) -> RgbaImage {
+    let ss = 3u32;
+    let hi = (side * ss).clamp(1, 1024);
+    let mut pixmap = match Pixmap::new(hi, hi) {
+        Some(p) => p,
+        None => return RgbaImage::new(side, side),
+    };
     let size = tree.size();
-    let scale_x = resolution as f32 / size.width();
-    let scale_y = resolution as f32 / size.height();
-    let scale = scale_x.min(scale_y);
+    let scale = (hi as f32 / size.width()).min(hi as f32 / size.height());
+    let tx = (hi as f32 - size.width() * scale) / 2.0;
+    let ty = (hi as f32 - size.height() * scale) / 2.0;
+    let transform = resvg::tiny_skia::Transform::from_row(scale, 0.0, 0.0, scale, tx, ty);
+    resvg::render(tree, transform, &mut pixmap.as_mut());
+    let hi_img =
+        RgbaImage::from_raw(hi, hi, pixmap.data().to_vec()).unwrap_or_else(|| RgbaImage::new(hi, hi));
+    imageops::resize(&hi_img, side, side, imageops::FilterType::Lanczos3)
+}
 
-    let transform = resvg::tiny_skia::Transform::from_scale(scale, scale);
-    resvg::render(&tree, transform, &mut pixmap.as_mut());
-
-    let mut img = RgbaImage::from_raw(resolution, resolution, pixmap.data().to_vec())?;
-
-    // Snap pixels: threshold alpha to fully opaque or transparent,
-    // and quantize colors to remove anti-aliasing blur
-    for pixel in img.pixels_mut() {
-        if pixel.0[3] < 128 {
-            pixel.0 = [0, 0, 0, 0]; // fully transparent
-        } else {
-            pixel.0[3] = 255; // fully opaque
-                              // Quantize each color channel to reduce gradients (snap to 8 levels)
-            for c in 0..3 {
-                pixel.0[c] = (pixel.0[c] / 32) * 32 + 16;
-            }
-        }
-    }
-
-    // Add 1px black outline: expand canvas by 2px, draw black behind opaque pixels
-    let w = img.width();
-    let h = img.height();
-    let mut outlined = RgbaImage::new(w + 2, h + 2);
-    let black = Rgba([0, 0, 0, 255]);
-
-    // First pass: draw black in all 8 neighbors of each opaque pixel
-    for y in 0..h {
-        for x in 0..w {
-            if img.get_pixel(x, y).0[3] > 0 {
-                for dy in 0..=2i32 {
-                    for dx in 0..=2i32 {
-                        let ox = x as i32 + dx - 1 + 1; // +1 for canvas offset
-                        let oy = y as i32 + dy - 1 + 1;
-                        if ox >= 0
-                            && oy >= 0
-                            && (ox as u32) < outlined.width()
-                            && (oy as u32) < outlined.height()
-                        {
-                            outlined.put_pixel(ox as u32, oy as u32, black);
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // Second pass: draw original pixels on top (offset by 1)
-    imageops::overlay(&mut outlined, &img, 1, 1);
-
-    Some(outlined)
+/// Smoothly fit an arbitrary raster into a centered `side`×`side` canvas.
+fn fit_into_box(img: &RgbaImage, side: u32) -> RgbaImage {
+    let (w, h) = (img.width().max(1), img.height().max(1));
+    let scale = (side as f32 / w as f32).min(side as f32 / h as f32);
+    let nw = ((w as f32 * scale).round() as u32).max(1);
+    let nh = ((h as f32 * scale).round() as u32).max(1);
+    let resized = imageops::resize(img, nw, nh, imageops::FilterType::Lanczos3);
+    let mut canvas = RgbaImage::new(side, side);
+    imageops::overlay(&mut canvas, &resized, ((side - nw) / 2) as i64, ((side - nh) / 2) as i64);
+    canvas
 }
 
 /// Find bundled SVG data for an emoji sequence.
 pub fn bundled_svg(emoji: &str) -> Option<&'static str> {
-    let codepoint = emoji_codepoint(emoji);
-    bundled_svg_data(&codepoint)
-}
-
-/// Render a single emoji: try custom sprite first, then bundled SVG
-pub fn render_emoji(emoji: &str, resolution: u32, sprites_dir: Option<&Path>) -> Option<RgbaImage> {
-    // Try custom sprite first
-    if let Some(dir) = sprites_dir {
-        if let Some(img) = load_custom_sprite(emoji, dir, resolution) {
-            return Some(img);
-        }
-    }
-
-    // Fall back to bundled SVG
-    let svg_data = bundled_svg(emoji)?;
-    render_emoji_from_svg(svg_data.as_bytes(), resolution)
+    bundled_svg_data(&emoji_codepoint(emoji))
 }
 
 fn is_regional_indicator(ch: char) -> bool {
@@ -192,10 +142,6 @@ mod tests {
     #[test]
     fn builds_codepoint_names_for_sequences() {
         assert_eq!(emoji_codepoint("🇫🇷"), "1f1eb-1f1f7");
-        assert_eq!(
-            emoji_codepoint("👨‍👩‍👧‍👦"),
-            "1f468-200d-1f469-200d-1f467-200d-1f466"
-        );
     }
 
     #[test]

@@ -1,1 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36"><path fill="#EA0B19" d="M32 5H4c-1.008 0-1.926.375-2.629.99L6.923 10H36V9c0-2.209-1.791-4-4-4z"/><path fill="#EEE" d="M13.846 15H36v-5H6.923z"/><path fill="#EA0B19" d="M18 18l-4.154 3H36v-6H13.846z"/><path fill="#EEE" d="M6.923 26H36v-5H13.846z"/><path fill="#EA0B19" d="M1.371 30.01c.703.615 1.621.99 2.629.99h28c2.209 0 4-1.791 4-4v-1H6.923l-5.552 4.01z"/><path fill="#0F55EC" d="M13.846 21L18 18l-4.154-3-6.923-5-5.552-4.01C.532 6.724 0 7.799 0 9v18c0 1.201.532 2.276 1.371 3.01L6.923 26l6.923-5z"/><path fill="#FFF" d="M8.187 18.838l2.313-1.675H7.641l-.888-2.726-.89 2.726H3l2.315 1.677-.89 2.723 2.325-1.684 2.325 1.684z"/></svg>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="900" height="600" viewBox="0 0 45 30">
+<rect fill="#ED0000" width="45" height="30"/>
+<path stroke="#FFF" stroke-width="6" d="M0,9 h 45 m -45,12 h 45"/>
+<path fill="#0050F0" d="M0,0L25.98076,15L0,30z"/>
+<comment>the star is in the center of gravity of the triangle, so the x-pos is irrational (tan(30 deg) * 15)</comment>
+<g fill="#FFF" transform="translate(8.6602540378443864676372317075294,15) scale(5)">
+<g id="cone">
+<polygon id="triangle" points="0,0 0,1 .5,1" transform="translate(0,-1) rotate(18)"/>
+<use xlink:href="#triangle" transform="scale(-1,1)"/>
+</g>
+<use xlink:href="#cone" transform="rotate(72)"/>
+<use xlink:href="#cone" transform="rotate(-72)"/>
+<use xlink:href="#cone" transform="rotate(144)"/>
+<use xlink:href="#cone" transform="rotate(-144)"/>
+</g>
+</svg>

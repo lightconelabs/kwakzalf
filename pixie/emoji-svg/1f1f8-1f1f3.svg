@@ -1,1 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36"><path fill="#00853F" d="M4 5C1.791 5 0 6.791 0 9v18c0 2.209 1.791 4 4 4h8V5H4z"/><path fill="#FDEF42" d="M12 5h12v26H12z"/><path fill="#E31B23" d="M32 5h-8v26h8c2.209 0 4-1.791 4-4V9c0-2.209-1.791-4-4-4z"/><path fill="#00853F" d="M18.869 16.674L18 14l-.869 2.674H14.32l2.274 1.652L15.726 21 18 19.348 20.274 21l-.868-2.674 2.274-1.652z"/></svg>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg version="1.0" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="900" height="600">
+	<rect width="900" height="600" fill="#00853f"/>
+	<rect x="300" width="600" height="600" fill="#fdef42"/>
+	<rect x="600" width="300" height="600" fill="#e31b23"/>
+	<g transform="translate(450,300)" fill="#00853f">
+		<g id="c">
+			<path id="t" d="M 0,-100 v 100 h 50 z" transform="rotate(18 0,-100)"/>
+			<use xlink:href="#t" transform="scale(-1,1)"/>
+		</g>
+		<use xlink:href="#c" transform="rotate(72)"/>
+		<use xlink:href="#c" transform="rotate(144)"/>
+		<use xlink:href="#c" transform="rotate(216)"/>
+		<use xlink:href="#c" transform="rotate(288)"/>
+	</g>
+</svg>
