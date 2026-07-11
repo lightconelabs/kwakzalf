@@ -151,7 +151,7 @@ fn main() -> Result<(), String> {
         TextMode::Pixel => false,
     };
     // Sizing and spacing differ between the proportional and pixel fonts.
-    let scale = cli.text_scale.unwrap_or(if smooth { 0.52 } else { 0.34 });
+    let scale = cli.text_scale.unwrap_or(if smooth { 0.72 } else { 0.34 });
     let tracking = cli.tracking.unwrap_or(if smooth { 0 } else { 2 });
 
     // Render text
