@@ -6,6 +6,7 @@ mod compose;
 mod emoji;
 mod text;
 
+use compose::BadgeStyle;
 use emoji::EmojiStyle;
 use text::TextStyle;
 
@@ -39,6 +40,18 @@ struct Cli {
     /// Draw a dark silhouette outline around emojis (pixelated mode only)
     #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
     outline: bool,
+
+    /// Badge housing the emoji: none, or a domino tile (one emoji per cell)
+    #[arg(long, default_value_t = BadgeMode::None, value_enum)]
+    badge: BadgeMode,
+
+    /// Badge tile fill color as hex (default: ivory)
+    #[arg(long, default_value = "f9f7f1", value_parser = parse_hex_color)]
+    badge_fill: [u8; 3],
+
+    /// Draw a soft drop shadow under the badge
+    #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
+    badge_shadow: bool,
 
     /// Text rendering: auto (smooth with crisp emoji, pixel with pixelated), smooth, or pixel
     #[arg(long, default_value_t = TextMode::Auto, value_enum)]
@@ -81,6 +94,21 @@ struct Cli {
 enum OutputFormat {
     Png,
     Svg,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, ValueEnum)]
+enum BadgeMode {
+    None,
+    Domino,
+}
+
+impl fmt::Display for BadgeMode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::None => write!(f, "none"),
+            Self::Domino => write!(f, "domino"),
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, ValueEnum)]
@@ -173,7 +201,16 @@ fn main() -> Result<(), String> {
 
     // Compose. Gap scales with the emoji size so layouts stay balanced.
     let padding = (emoji_box as f32 * 0.28).round() as u32;
-    let logo = compose::compose_horizontal(&emoji_images, text_img.as_ref(), padding);
+    let logo = match cli.badge {
+        BadgeMode::None => compose::compose_horizontal(&emoji_images, text_img.as_ref(), padding),
+        BadgeMode::Domino => {
+            let badge = BadgeStyle {
+                fill: cli.badge_fill,
+                shadow: cli.badge_shadow,
+            };
+            compose::compose_domino(&emoji_images, text_img.as_ref(), padding, &badge)
+        }
+    };
 
     // Output
     match cli.format {

@@ -7,10 +7,11 @@ description: Design a logo for a DuckEight tool using pixel art emojis and text
 
 You are designing a logo for a DuckEight tool. All DuckEight logos follow these brand constraints:
 
-- **Style:** A clean, full-detail emoji paired with a smooth modern wordmark
-  (Nunito) — polished and contemporary. (In all-pixel mode the wordmark switches
-  to a pixel font to match.)
-- **Composition:** One or more emojis + tool name text, arranged horizontally (emojis left, text right)
+- **Style:** Two full-detail emoji housed in a **domino tile** (`--badge domino`)
+  — a soft rounded plate split into two cells by a divider — paired with a smooth
+  modern wordmark (Nunito). Polished, self-contained, works on any background.
+- **Composition:** Two emojis in a domino badge + tool name text to the right.
+  Pick exactly two emoji so each fills one cell of the domino.
 - **Font:** Nunito (bundled, default) for the smooth look; Press Start 2P for
   the pixel look; or supply any font with `--font`
 - **Background:** Transparent
@@ -35,8 +36,8 @@ You are designing a logo for a DuckEight tool. All DuckEight logos follow these 
 4. **Generate the logo** using the `pixie` CLI:
 
 ```bash
-pixie --emojis "<chosen-emojis>" --text "<tool-name>" --color <hex> -o logos/<tool-name>-logo.png
-pixie --emojis "<chosen-emojis>" --text "<tool-name>" --color <hex> --format svg -o logos/<tool-name>-logo.svg
+pixie --emojis "<two-emojis>" --text "<tool-name>" --color <hex> --badge domino -o logos/<tool-name>-logo.png
+pixie --emojis "<two-emojis>" --text "<tool-name>" --color <hex> --badge domino --format svg -o logos/<tool-name>-logo.svg
 ```
 
 5. **Inspect the result** — read the PNG to view it. Check it on both a light and
@@ -62,6 +63,8 @@ The binary will be at `${CLAUDE_PLUGIN_ROOT}/pixie/target/release/pixie`.
 pixie --emojis "🦆🎱" --text "duckeight" [OPTIONS] -o output.png
 
 Options:
+  --badge none|domino  House the emoji in a domino tile (default: none)
+  --badge-fill HEX     Badge fill color (default: ivory f9f7f1)
   --emoji-pixelate t|f Pixelate the emoji instead of rendering it crisp (default: false)
   --text-style S       auto | smooth | pixel (default: auto — smooth with crisp emoji)
   --grid N             Logical pixels per pixelated emoji, 8-128 (default: 28; smaller = chunkier)

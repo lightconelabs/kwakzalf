@@ -35,10 +35,24 @@ switches to the pixel font (Press Start 2P) with a matching outline. Simple, bol
 emoji pixelate well; fine-detail ones (e.g. a musical score) read better crisp.
 Force either text style with `--text-style smooth|pixel`.
 
+### Badge
+
+`--badge domino` houses the emoji in a domino-style tile — a soft rounded 2:1
+plate split into one cell per emoji by a contrasting divider, with a gentle drop
+shadow. It turns loose emoji into a single, self-contained mark that reads on any
+background. Works best with exactly two emoji.
+
+```bash
+pixie --emojis "🦆🎱" --text "duckeight" --color f4a030 --badge domino -o logo.png
+```
+
 ### Options
 
 - `--emojis` — emoji characters to render
 - `--text` — text to display next to emojis
+- `--badge none|domino` — house the emoji in a domino tile (default: none)
+- `--badge-fill HEX` — badge tile fill color (default: ivory `f9f7f1`); divider/border auto-contrast
+- `--badge-shadow true|false` — soft drop shadow under the badge (default: true)
 - `--emoji-pixelate true|false` — pixelate the emoji instead of rendering it crisp (default: false)
 - `--text-style auto|smooth|pixel` — text rendering; auto = smooth with crisp emoji, pixel with pixelated (default: auto)
 - `--grid N` — logical pixels per emoji when pixelated, 8–128 (default: 28; smaller is chunkier)
