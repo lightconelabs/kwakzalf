@@ -37,22 +37,35 @@ fn detect_native_size(font: &Font, max_size: f32) -> f32 {
     max_size
 }
 
-/// Render text to an RgbaImage with the given font at pixel_size and color.
-/// Renders at 8px native size (Press Start 2P's design grid) then scales up.
-pub fn render_text(text: &str, font: &Font, pixel_size: f32, color: [u8; 3]) -> RgbaImage {
-    let color = Rgba([color[0], color[1], color[2], 255]);
-    let black = Rgba([0, 0, 0, 255]);
+/// Style options for text rendering.
+#[derive(Clone, Copy)]
+pub struct TextStyle {
+    /// Target cap height in output pixels.
+    pub pixel_size: f32,
+    /// Fill color.
+    pub color: [u8; 3],
+    /// Draw a dark outline (applied on the native grid so it scales crisply).
+    pub outline: bool,
+    /// Extra logical-pixel gap between glyph cells (letter tracking).
+    pub tracking: i32,
+}
 
-    // Detect native pixel size: rasterize 'M' at increasing sizes until height jumps,
-    // indicating we've left the font's native grid. Default to pixel_size if no grid found.
-    let native_size = detect_native_size(font, pixel_size);
-    let scale = (pixel_size / native_size).round().max(1.0) as u32;
+/// Render text into an RgbaImage at the font's native pixel grid, then scale up
+/// with nearest-neighbor so pixels stay crisp. Outline (if enabled) is added on
+/// the native grid so it is a single logical pixel thick after scaling.
+pub fn render_text(text: &str, font: &Font, style: TextStyle) -> RgbaImage {
+    let color = Rgba([style.color[0], style.color[1], style.color[2], 255]);
+    let ink = Rgba([26u8, 24, 30, 255]);
 
-    // Rasterize all glyphs at native size
+    let native_size = detect_native_size(font, style.pixel_size);
+    let scale = (style.pixel_size / native_size).round().max(1.0) as u32;
+
+    // Rasterize all glyphs at native size.
     let mut glyphs = Vec::new();
-    let mut total_width = 0u32;
+    let mut total_width = 0i32;
     let mut max_ascent = 0i32;
     let mut max_descent = 0i32;
+    let tracking = style.tracking.max(0);
 
     for ch in text.chars() {
         let (metrics, bitmap) = font.rasterize(ch, native_size);
@@ -60,23 +73,23 @@ pub fn render_text(text: &str, font: &Font, pixel_size: f32, color: [u8; 3]) -> 
         let descent = -metrics.ymin;
         max_ascent = max_ascent.max(ascent);
         max_descent = max_descent.max(descent);
-        let advance = metrics.advance_width.ceil() as u32;
-        total_width += advance;
+        let advance = metrics.advance_width.ceil() as i32;
+        total_width += advance + tracking;
         glyphs.push((metrics, bitmap, advance));
     }
+    total_width -= tracking; // no trailing gap
 
-    // Canvas at native size — no outline yet
-    let native_h = (max_ascent + max_descent) as u32;
-    let native_w = total_width;
-    let mut img = RgbaImage::new(native_w.max(1), native_h.max(1));
+    let native_h = (max_ascent + max_descent).max(1) as u32;
+    let native_w = total_width.max(1) as u32;
+    // 1px margin so an optional outline has room on every side.
+    let mut img = RgbaImage::new(native_w + 2, native_h + 2);
+    let baseline_y = max_ascent + 1;
+    let margin_x = 1i32;
 
-    let baseline_y = max_ascent;
-
-    // Draw glyphs centered within their monospace cell
-    let mut x = 0i32;
+    // Draw glyphs centered within their monospace cell.
+    let mut x = margin_x;
     for (metrics, bitmap, advance) in &glyphs {
-        // Center the glyph horizontally within its cell
-        let cell_width = *advance as i32;
+        let cell_width = *advance;
         let glyph_width = metrics.xmin + metrics.width as i32;
         let x_pad = (cell_width - glyph_width) / 2;
         let gx = x + metrics.xmin + x_pad;
@@ -93,11 +106,16 @@ pub fn render_text(text: &str, font: &Font, pixel_size: f32, color: [u8; 3]) -> 
                 }
             }
         }
-        x += cell_width;
+        x += cell_width + tracking;
     }
 
-    // Scale up with nearest-neighbor for crisp pixels
-    let scaled = if scale > 1 {
+    // Optional dark outline on the native grid (1 logical pixel, 4-connected).
+    if style.outline {
+        img = outline_native(&img, color, ink);
+    }
+
+    // Scale up with nearest-neighbor for crisp pixels.
+    if scale > 1 {
         imageops::resize(
             &img,
             img.width() * scale,
@@ -106,32 +124,36 @@ pub fn render_text(text: &str, font: &Font, pixel_size: f32, color: [u8; 3]) -> 
         )
     } else {
         img
-    };
+    }
+}
 
-    // Add 1px black outline on the scaled image
-    let sw = scaled.width();
-    let sh = scaled.height();
-    let mut outlined = RgbaImage::new(sw + 2, sh + 2);
-
-    // Draw black in 8 neighbors of each opaque pixel
-    for y in 0..sh {
-        for x in 0..sw {
-            if scaled.get_pixel(x, y).0[3] > 0 {
-                for dy in 0..=2u32 {
-                    for dx in 0..=2u32 {
-                        let ox = x + dx;
-                        let oy = y + dy;
-                        if ox < outlined.width() && oy < outlined.height() {
-                            outlined.put_pixel(ox, oy, black);
-                        }
+/// Add a 1px dark outline around the filled glyph pixels at native resolution.
+fn outline_native(img: &RgbaImage, fill: Rgba<u8>, ink: Rgba<u8>) -> RgbaImage {
+    let w = img.width();
+    let h = img.height();
+    let mut out = img.clone();
+    for y in 0..h {
+        for x in 0..w {
+            // Only outline into empty cells adjacent to a filled glyph pixel.
+            if img.get_pixel(x, y).0[3] != 0 {
+                continue;
+            }
+            let mut touch = false;
+            for (dx, dy) in [(0i32, -1i32), (0, 1), (-1, 0), (1, 0)] {
+                let nx = x as i32 + dx;
+                let ny = y as i32 + dy;
+                if nx >= 0 && ny >= 0 && (nx as u32) < w && (ny as u32) < h {
+                    let p = img.get_pixel(nx as u32, ny as u32);
+                    if p.0 == fill.0 {
+                        touch = true;
+                        break;
                     }
                 }
             }
+            if touch {
+                out.put_pixel(x, y, ink);
+            }
         }
     }
-
-    // Draw scaled text on top (offset by 1 for the outline margin)
-    imageops::overlay(&mut outlined, &scaled, 1, 1);
-
-    outlined
+    out
 }

@@ -6,6 +6,9 @@ mod compose;
 mod emoji;
 mod text;
 
+use emoji::EmojiStyle;
+use text::TextStyle;
+
 #[derive(Parser)]
 #[command(name = "pixie", about = "Emoji-to-pixel-art logo generator")]
 struct Cli {
@@ -17,9 +20,33 @@ struct Cli {
     #[arg(long)]
     text: Option<String>,
 
-    /// Pixel grid resolution per emoji (32 or 64)
-    #[arg(long, default_value_t = 32, value_parser = parse_resolution)]
-    resolution: u32,
+    /// Logical pixels per emoji side (the art resolution — smaller is chunkier)
+    #[arg(long, default_value_t = 28, value_parser = parse_grid)]
+    grid: u32,
+
+    /// Output pixels per logical pixel (nearest-neighbor zoom)
+    #[arg(long, default_value_t = 5, value_parser = parse_zoom)]
+    zoom: u32,
+
+    /// Palette size for emoji color reduction (0 keeps source colors)
+    #[arg(long, default_value_t = 16)]
+    colors: u32,
+
+    /// Draw a dark silhouette outline around emojis
+    #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
+    outline: bool,
+
+    /// Draw a dark outline around the text (matches the emoji outline)
+    #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
+    text_outline: bool,
+
+    /// Text cap height as a fraction of the emoji box height
+    #[arg(long, default_value_t = 0.34)]
+    text_scale: f32,
+
+    /// Extra tracking (letter spacing) between glyphs, in logical pixels
+    #[arg(long, default_value_t = 2)]
+    tracking: i32,
 
     /// Output format: png or svg
     #[arg(long, default_value_t = OutputFormat::Png, value_enum)]
@@ -64,11 +91,18 @@ fn main() -> Result<(), String> {
         return Err("no emoji sequences found in --emojis".to_string());
     }
 
+    let style = EmojiStyle {
+        grid: cli.grid,
+        zoom: cli.zoom,
+        colors: cli.colors,
+        outline: cli.outline,
+    };
+
     // Render emojis
     let emoji_images: Vec<_> = chars
         .iter()
         .filter_map(|ch| {
-            let img = emoji::render_emoji(ch, cli.resolution, cli.sprites_dir.as_deref());
+            let img = emoji::render_emoji(ch, style, cli.sprites_dir.as_deref());
             if img.is_none() {
                 eprintln!("Warning: could not render emoji {}", ch);
             }
@@ -79,19 +113,26 @@ fn main() -> Result<(), String> {
         return Err("could not render any of the requested emoji sequences".to_string());
     }
 
+    let emoji_box = emoji_images.iter().map(|e| e.height()).max().unwrap_or(0);
+
     // Render text
     let text_img = cli
         .text
         .as_ref()
         .map(|label| {
             let font = text::load_font(cli.font.as_deref())?;
-            let font_size = cli.resolution as f32 * 0.5;
-            Ok::<_, String>(text::render_text(label, &font, font_size, cli.color))
+            let text_style = TextStyle {
+                pixel_size: (emoji_box as f32 * cli.text_scale).max(6.0),
+                color: cli.color,
+                outline: cli.text_outline,
+                tracking: cli.tracking,
+            };
+            Ok::<_, String>(text::render_text(label, &font, text_style))
         })
         .transpose()?;
 
-    // Compose
-    let padding = cli.resolution / 4;
+    // Compose. Gap scales with the emoji size so layouts stay balanced.
+    let padding = (emoji_box as f32 * 0.28).round() as u32;
     let logo = compose::compose_horizontal(&emoji_images, text_img.as_ref(), padding);
 
     // Output
@@ -122,11 +163,19 @@ fn main() -> Result<(), String> {
     Ok(())
 }
 
-fn parse_resolution(raw: &str) -> Result<u32, String> {
+fn parse_grid(raw: &str) -> Result<u32, String> {
     match raw.parse::<u32>() {
-        Ok(32 | 64) => raw.parse::<u32>().map_err(|err| err.to_string()),
-        Ok(_) => Err("resolution must be 32 or 64".to_string()),
-        Err(err) => Err(format!("invalid resolution: {err}")),
+        Ok(n) if (8..=128).contains(&n) => Ok(n),
+        Ok(_) => Err("grid must be between 8 and 128".to_string()),
+        Err(err) => Err(format!("invalid grid: {err}")),
+    }
+}
+
+fn parse_zoom(raw: &str) -> Result<u32, String> {
+    match raw.parse::<u32>() {
+        Ok(n) if (1..=32).contains(&n) => Ok(n),
+        Ok(_) => Err("zoom must be between 1 and 32".to_string()),
+        Err(err) => Err(format!("invalid zoom: {err}")),
     }
 }
 
@@ -145,7 +194,8 @@ fn parse_hex_color(hex: &str) -> Result<[u8; 3], String> {
     Ok([r, g, b])
 }
 
-/// Convert an RGBA image to SVG by drawing each non-transparent pixel as a rect
+/// Convert an RGBA image to SVG, merging horizontal runs of identical pixels
+/// into single rects to keep the output compact.
 fn png_to_svg(img: &image::RgbaImage) -> String {
     let mut svg = format!(
         r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {} {}" shape-rendering="crispEdges">"#,
@@ -155,20 +205,30 @@ fn png_to_svg(img: &image::RgbaImage) -> String {
     svg.push('\n');
 
     for y in 0..img.height() {
-        for x in 0..img.width() {
-            let px = img.get_pixel(x, y);
-            if px.0[3] > 0 {
-                svg.push_str(&format!(
-                    r#"<rect x="{}" y="{}" width="1" height="1" fill="rgba({},{},{},{:.2})"/>"#,
-                    x,
-                    y,
-                    px.0[0],
-                    px.0[1],
-                    px.0[2],
-                    px.0[3] as f32 / 255.0
-                ));
-                svg.push('\n');
+        let mut x = 0;
+        while x < img.width() {
+            let px = img.get_pixel(x, y).0;
+            if px[3] == 0 {
+                x += 1;
+                continue;
             }
+            // Extend the run while the pixel is identical.
+            let mut run = 1;
+            while x + run < img.width() && img.get_pixel(x + run, y).0 == px {
+                run += 1;
+            }
+            svg.push_str(&format!(
+                r#"<rect x="{}" y="{}" width="{}" height="1" fill="rgba({},{},{},{:.2})"/>"#,
+                x,
+                y,
+                run,
+                px[0],
+                px[1],
+                px[2],
+                px[3] as f32 / 255.0
+            ));
+            svg.push('\n');
+            x += run;
         }
     }
 
@@ -178,7 +238,7 @@ fn png_to_svg(img: &image::RgbaImage) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{parse_hex_color, parse_resolution};
+    use super::{parse_grid, parse_hex_color, parse_zoom};
 
     #[test]
     fn rejects_short_hex_colors() {
@@ -191,12 +251,14 @@ mod tests {
     }
 
     #[test]
-    fn rejects_unsupported_resolutions() {
-        assert!(parse_resolution("1").is_err());
+    fn rejects_out_of_range_grid() {
+        assert!(parse_grid("4").is_err());
+        assert!(parse_grid("200").is_err());
     }
 
     #[test]
-    fn accepts_supported_resolutions() {
-        assert_eq!(parse_resolution("64").unwrap(), 64);
+    fn accepts_valid_grid_and_zoom() {
+        assert_eq!(parse_grid("28").unwrap(), 28);
+        assert_eq!(parse_zoom("5").unwrap(), 5);
     }
 }
