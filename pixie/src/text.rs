@@ -3,7 +3,7 @@ use image::{imageops, Rgba, RgbaImage};
 use std::path::Path;
 
 const PIXEL_FONT: &[u8] = include_bytes!("../fonts/PressStart2P-Regular.ttf");
-const SMOOTH_FONT: &[u8] = include_bytes!("../fonts/Poppins-SemiBold.ttf");
+const SMOOTH_FONT: &[u8] = include_bytes!("../fonts/Nunito-ExtraBold.ttf");
 
 /// Load font from a custom path, or the bundled default for the chosen mode
 /// (Poppins for smooth text, Press Start 2P for pixel text).

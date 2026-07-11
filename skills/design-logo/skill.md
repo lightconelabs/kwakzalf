@@ -8,10 +8,10 @@ description: Design a logo for a DuckEight tool using pixel art emojis and text
 You are designing a logo for a DuckEight tool. All DuckEight logos follow these brand constraints:
 
 - **Style:** A clean, full-detail emoji paired with a smooth modern wordmark
-  (Poppins) — polished and contemporary. (In all-pixel mode the wordmark switches
+  (Nunito) — polished and contemporary. (In all-pixel mode the wordmark switches
   to a pixel font to match.)
 - **Composition:** One or more emojis + tool name text, arranged horizontally (emojis left, text right)
-- **Font:** Poppins (bundled, default) for the smooth look; Press Start 2P for
+- **Font:** Nunito (bundled, default) for the smooth look; Press Start 2P for
   the pixel look; or supply any font with `--font`
 - **Background:** Transparent
 - **Color:** Pick a text color that reads on both light and dark backgrounds and

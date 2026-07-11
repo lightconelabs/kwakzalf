@@ -17,8 +17,8 @@ Pixie bundles emoji SVG artwork under `emoji-svg/`, compiled into the binary.
 
 ## Text fonts
 
-- **Poppins** by Indian Type Foundry / Jonny Pinhorn — the default (smooth) text
-  font, licensed under the **SIL Open Font License 1.1** (`fonts/`).
+- **Nunito** by Vernon Adams / Cyreal — the default (smooth) text font, instanced
+  to ExtraBold, licensed under the **SIL Open Font License 1.1** (`fonts/`).
 - **Press Start 2P** by CodeMan38 — the pixel text font used in all-pixel mode
   (`--emoji-pixelate true` / `--text-style pixel`), licensed under the **SIL Open
   Font License 1.1** (`fonts/`).

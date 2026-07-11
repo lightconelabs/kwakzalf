@@ -24,7 +24,7 @@ pixie --emojis "🦆🎱" --text "duckeight" --color f4a030 -o logo.png
 ```
 
 By default the emoji is rendered **crisp** — full-detail, smoothly antialiased —
-and the tool name is set in a clean **smooth modern font** (Poppins), for a
+and the tool name is set in a clean **smooth modern font** (Nunito), for a
 polished contemporary logo.
 
 Pass `--emoji-pixelate true` for one all-pixel-art aesthetic: the emoji is
