@@ -5,8 +5,6 @@ use image::{imageops, Rgba, RgbaImage};
 pub struct BadgeStyle {
     /// Tile fill color.
     pub fill: [u8; 3],
-    /// Draw a soft drop shadow under the tile.
-    pub shadow: bool,
 }
 
 /// Compose the emoji into a domino tile (one emoji per cell, split by dividers),
@@ -18,11 +16,7 @@ pub fn compose_domino(
     badge: &BadgeStyle,
 ) -> RgbaImage {
     let tile = build_domino(emojis, badge);
-    let mark = if badge.shadow {
-        with_shadow(&tile)
-    } else {
-        tile
-    };
+    let mark = with_shadow(&tile);
     compose_horizontal(&[mark], text, padding)
 }
 
