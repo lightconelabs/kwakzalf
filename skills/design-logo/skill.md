@@ -7,23 +7,24 @@ description: Design a logo for a DuckEight tool using pixel art emojis and text
 
 You are designing a logo for a DuckEight tool. All DuckEight logos follow these brand constraints:
 
-- **Style:** Clean, chunky pixel art — flat limited-color palettes, a thin dark
-  outline on both emoji and text, no gradients or blur
-- **Composition:** One or more emojis (as pixel art) + tool name text, arranged horizontally (emojis left, text right)
+- **Style:** A clean, full-detail emoji paired with a chunky pixel-art wordmark —
+  the crisp-icon / retro-type contrast. The text has a thin dark outline for a
+  cohesive sticker feel.
+- **Composition:** One or more emojis + tool name text, arranged horizontally (emojis left, text right)
 - **Font:** Press Start 2P pixel font (bundled with pixie) or another pixel/mono font
 - **Background:** Transparent
-- **Grid:** ~28 logical pixels per emoji at zoom 5 (the defaults) — chunky enough
-  to read as pixel art, detailed enough for most emoji
 - **Color:** Pick a text color that reads on both light and dark backgrounds and
   ties into the emoji palette (e.g. amber `f4c430`, green `7ac74f`). Avoid pure
   white text — it vanishes on light README themes.
+- **Pixelated emoji (optional):** `--emoji-pixelate true` renders the emoji as
+  pixel art too, for one all-pixel aesthetic. Use it for simple, bold emoji;
+  fine-detail ones read better crisp (the default).
 
 ## Process
 
 1. **Ask the user** which DuckEight tool needs a logo
 2. **Discuss emoji choices** — pick 1-3 emojis that represent the tool. Keep it
-   simple. Emojis with fine detail (e.g. a musical score) reduce poorly to the
-   pixel grid; prefer bold, simple shapes.
+   simple.
 3. **Confirm the tool name** text to display
 4. **Generate the logo** using the `pixie` CLI:
 
@@ -55,10 +56,11 @@ The binary will be at `${CLAUDE_PLUGIN_ROOT}/pixie/target/release/pixie`.
 pixie --emojis "🦆🎱" --text "duckeight" [OPTIONS] -o output.png
 
 Options:
-  --grid N             Logical pixels per emoji, 8-128 (default: 28; smaller = chunkier)
+  --emoji-pixelate t|f Pixelate the emoji instead of rendering it crisp (default: false)
+  --grid N             Logical pixels per pixelated emoji, 8-128 (default: 28; smaller = chunkier)
   --zoom N             Output pixels per logical pixel, 1-32 (default: 5)
   --colors N           Palette size for emoji color reduction, 0 keeps source (default: 16)
-  --outline true|false Dark silhouette outline around emojis (default: true)
+  --outline true|false Dark silhouette outline around pixelated emojis (default: true)
   --text-outline t|f   Dark outline around the text (default: true)
   --text-scale F       Text cap height as a fraction of the emoji box (default: 0.34)
   --tracking N         Extra letter spacing in logical pixels (default: 2)

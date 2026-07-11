@@ -32,7 +32,11 @@ struct Cli {
     #[arg(long, default_value_t = 16)]
     colors: u32,
 
-    /// Draw a dark silhouette outline around emojis
+    /// Pixelate emojis. When false (default), render them crisp (full detail) next to pixel text
+    #[arg(long, default_value_t = false, action = clap::ArgAction::Set)]
+    emoji_pixelate: bool,
+
+    /// Draw a dark silhouette outline around emojis (pixelated mode only)
     #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
     outline: bool,
 
@@ -96,6 +100,7 @@ fn main() -> Result<(), String> {
         zoom: cli.zoom,
         colors: cli.colors,
         outline: cli.outline,
+        pixelate: cli.emoji_pixelate,
     };
 
     // Render emojis

@@ -16,6 +16,17 @@ pub struct EmojiStyle {
     pub colors: u32,
     /// Draw a dark silhouette outline around the sprite.
     pub outline: bool,
+    /// Pixelate the emoji. When false, render it crisp (full detail, smooth
+    /// edges) so a clean vector emoji sits next to the pixel text.
+    pub pixelate: bool,
+}
+
+impl EmojiStyle {
+    /// The output box side an emoji occupies, so pixelated and crisp emoji
+    /// share the same row height and layouts stay stable when toggling.
+    fn box_side(&self) -> u32 {
+        (self.grid + 2) * self.zoom
+    }
 }
 
 /// Get the bundled filename stem for an emoji sequence.
@@ -83,6 +94,10 @@ pub fn load_custom_sprite(emoji: &str, sprites_dir: &Path, style: EmojiStyle) ->
         return None;
     }
     let img = image::open(&sprite_path).ok()?.into_rgba8();
+    if !style.pixelate {
+        // Crisp mode: smoothly fit the sprite into the shared box, no pixel snap.
+        return Some(fit_into_box(&img, style.box_side()));
+    }
     // Fit the sprite into the logical grid with a smooth downscale, then process
     // it through the same pipeline so custom sprites match the bundled look.
     let fitted = fit_into_grid(&img, style.grid);
@@ -93,6 +108,10 @@ pub fn load_custom_sprite(emoji: &str, sprites_dir: &Path, style: EmojiStyle) ->
 pub fn render_emoji_from_svg(svg_data: &[u8], style: EmojiStyle) -> Option<RgbaImage> {
     let options = usvg::Options::default();
     let tree = usvg::Tree::from_data(svg_data, &options).ok()?;
+
+    if !style.pixelate {
+        return Some(render_crisp(&tree, style.box_side()));
+    }
 
     // Supersample: render several device pixels per logical pixel so that when we
     // downscale to the grid, each logical pixel is a clean average of the artwork
@@ -160,6 +179,42 @@ fn finish_sprite(mut grid_img: RgbaImage, style: EmojiStyle) -> RgbaImage {
     } else {
         bordered
     }
+}
+
+/// Render an emoji SVG crisp (full detail, antialiased) into a centered square
+/// of `side` px. Supersampled then smoothly downscaled for clean edges.
+fn render_crisp(tree: &usvg::Tree, side: u32) -> RgbaImage {
+    let ss = 3u32;
+    let hi = (side * ss).min(1024).max(1);
+    let mut pixmap = match Pixmap::new(hi, hi) {
+        Some(p) => p,
+        None => return RgbaImage::new(side, side),
+    };
+    let size = tree.size();
+    let scale = (hi as f32 / size.width()).min(hi as f32 / size.height());
+    let draw_w = size.width() * scale;
+    let draw_h = size.height() * scale;
+    let tx = (hi as f32 - draw_w) / 2.0;
+    let ty = (hi as f32 - draw_h) / 2.0;
+    let transform = resvg::tiny_skia::Transform::from_row(scale, 0.0, 0.0, scale, tx, ty);
+    resvg::render(tree, transform, &mut pixmap.as_mut());
+    let hi_img = RgbaImage::from_raw(hi, hi, pixmap.data().to_vec())
+        .unwrap_or_else(|| RgbaImage::new(hi, hi));
+    imageops::resize(&hi_img, side, side, imageops::FilterType::Lanczos3)
+}
+
+/// Smoothly fit an arbitrary raster into a centered `side`×`side` canvas (crisp mode).
+fn fit_into_box(img: &RgbaImage, side: u32) -> RgbaImage {
+    let (w, h) = (img.width().max(1), img.height().max(1));
+    let scale = (side as f32 / w as f32).min(side as f32 / h as f32);
+    let nw = ((w as f32 * scale).round() as u32).max(1);
+    let nh = ((h as f32 * scale).round() as u32).max(1);
+    let resized = imageops::resize(img, nw, nh, imageops::FilterType::Lanczos3);
+    let mut canvas = RgbaImage::new(side, side);
+    let ox = ((side - nw) / 2) as i64;
+    let oy = ((side - nh) / 2) as i64;
+    imageops::overlay(&mut canvas, &resized, ox, oy);
+    canvas
 }
 
 /// Fit an arbitrary raster into a centered `grid`×`grid` canvas with a smooth downscale.

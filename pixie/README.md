@@ -18,20 +18,26 @@ cargo install --path .
 pixie --emojis "🦆🎱" --text "duckeight" --color f4a030 -o logo.png
 ```
 
-Emojis are rendered as clean, chunky pixel art: the source artwork is
-supersampled, downscaled to a small logical grid, reduced to a flat limited
-palette (killing gradients), given a thin dark silhouette outline, and scaled up
-with nearest-neighbor for crisp square pixels. Text uses a bundled pixel font
-with a matching 1-pixel outline.
+By default the emoji is rendered **crisp** — full-detail, smoothly antialiased —
+so a clean vector icon sits next to a chunky pixel wordmark. The text is drawn
+with a bundled pixel font and a thin dark outline for a cohesive sticker look.
+
+Pass `--emoji-pixelate true` to pixelate the emoji too (one all-pixel-art
+aesthetic): the source artwork is supersampled, downscaled to a small logical
+grid, reduced to a flat limited palette (killing gradients), given a thin dark
+silhouette outline, and scaled up with nearest-neighbor for crisp square pixels.
+Simple, bold emoji pixelate well; fine-detail ones (e.g. a musical score) read
+better crisp.
 
 ### Options
 
-- `--emojis` — emoji characters to render as pixel art
+- `--emojis` — emoji characters to render
 - `--text` — text to display next to emojis
-- `--grid N` — logical pixels per emoji, 8–128 (default: 28; smaller is chunkier)
+- `--emoji-pixelate true|false` — pixelate the emoji instead of rendering it crisp (default: false)
+- `--grid N` — logical pixels per emoji when pixelated, 8–128 (default: 28; smaller is chunkier)
 - `--zoom N` — output pixels per logical pixel, 1–32 (default: 5)
 - `--colors N` — palette size for emoji color reduction, 0 keeps source colors (default: 16)
-- `--outline true|false` — dark silhouette outline around emojis (default: true)
+- `--outline true|false` — dark silhouette outline around pixelated emojis (default: true)
 - `--text-outline true|false` — dark outline around the text (default: true)
 - `--text-scale F` — text cap height as a fraction of the emoji box (default: 0.34)
 - `--tracking N` — extra letter spacing in logical pixels (default: 2)
