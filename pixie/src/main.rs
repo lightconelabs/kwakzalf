@@ -40,17 +40,21 @@ struct Cli {
     #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
     outline: bool,
 
-    /// Draw a dark outline around the text (matches the emoji outline)
+    /// Text rendering: auto (smooth with crisp emoji, pixel with pixelated), smooth, or pixel
+    #[arg(long, default_value_t = TextMode::Auto, value_enum)]
+    text_style: TextMode,
+
+    /// Draw a dark outline around pixel text (matches the emoji outline)
     #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
     text_outline: bool,
 
-    /// Text cap height as a fraction of the emoji box height
-    #[arg(long, default_value_t = 0.34)]
-    text_scale: f32,
+    /// Text size as a fraction of the emoji box height (default: mode-based)
+    #[arg(long)]
+    text_scale: Option<f32>,
 
-    /// Extra tracking (letter spacing) between glyphs, in logical pixels
-    #[arg(long, default_value_t = 2)]
-    tracking: i32,
+    /// Extra letter spacing between glyphs (default: mode-based)
+    #[arg(long)]
+    tracking: Option<i32>,
 
     /// Output format: png or svg
     #[arg(long, default_value_t = OutputFormat::Png, value_enum)]
@@ -77,6 +81,26 @@ struct Cli {
 enum OutputFormat {
     Png,
     Svg,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, ValueEnum)]
+enum TextMode {
+    /// Smooth with crisp emoji, pixel with pixelated emoji
+    Auto,
+    /// Antialiased modern font
+    Smooth,
+    /// Blocky pixel font
+    Pixel,
+}
+
+impl fmt::Display for TextMode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Auto => write!(f, "auto"),
+            Self::Smooth => write!(f, "smooth"),
+            Self::Pixel => write!(f, "pixel"),
+        }
+    }
 }
 
 impl fmt::Display for OutputFormat {
@@ -120,17 +144,28 @@ fn main() -> Result<(), String> {
 
     let emoji_box = emoji_images.iter().map(|e| e.height()).max().unwrap_or(0);
 
+    // Text style: smooth modern font by default, pixel font in all-pixel mode.
+    let smooth = match cli.text_style {
+        TextMode::Auto => !cli.emoji_pixelate,
+        TextMode::Smooth => true,
+        TextMode::Pixel => false,
+    };
+    // Sizing and spacing differ between the proportional and pixel fonts.
+    let scale = cli.text_scale.unwrap_or(if smooth { 0.52 } else { 0.34 });
+    let tracking = cli.tracking.unwrap_or(if smooth { 0 } else { 2 });
+
     // Render text
     let text_img = cli
         .text
         .as_ref()
         .map(|label| {
-            let font = text::load_font(cli.font.as_deref())?;
+            let font = text::load_font(cli.font.as_deref(), smooth)?;
             let text_style = TextStyle {
-                pixel_size: (emoji_box as f32 * cli.text_scale).max(6.0),
+                pixel_size: (emoji_box as f32 * scale).max(6.0),
                 color: cli.color,
                 outline: cli.text_outline,
-                tracking: cli.tracking,
+                tracking,
+                smooth,
             };
             Ok::<_, String>(text::render_text(label, &font, text_style))
         })
@@ -199,46 +234,46 @@ fn parse_hex_color(hex: &str) -> Result<[u8; 3], String> {
     Ok([r, g, b])
 }
 
-/// Convert an RGBA image to SVG, merging horizontal runs of identical pixels
-/// into single rects to keep the output compact.
+/// Wrap the rendered image in an SVG as a base64-embedded PNG. With crisp emoji
+/// and antialiased text, a per-pixel-rect SVG would be many megabytes; a data-URI
+/// image is compact, lossless, and scales cleanly.
 fn png_to_svg(img: &image::RgbaImage) -> String {
-    let mut svg = format!(
-        r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {} {}" shape-rendering="crispEdges">"#,
-        img.width(),
-        img.height()
-    );
-    svg.push('\n');
+    let mut png = Vec::new();
+    image::DynamicImage::ImageRgba8(img.clone())
+        .write_to(&mut std::io::Cursor::new(&mut png), image::ImageFormat::Png)
+        .expect("failed to encode PNG for SVG");
+    let b64 = base64_encode(&png);
+    format!(
+        r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}" width="{w}" height="{h}"><image width="{w}" height="{h}" image-rendering="auto" href="data:image/png;base64,{b64}"/></svg>"#,
+        w = img.width(),
+        h = img.height(),
+    )
+}
 
-    for y in 0..img.height() {
-        let mut x = 0;
-        while x < img.width() {
-            let px = img.get_pixel(x, y).0;
-            if px[3] == 0 {
-                x += 1;
-                continue;
-            }
-            // Extend the run while the pixel is identical.
-            let mut run = 1;
-            while x + run < img.width() && img.get_pixel(x + run, y).0 == px {
-                run += 1;
-            }
-            svg.push_str(&format!(
-                r#"<rect x="{}" y="{}" width="{}" height="1" fill="rgba({},{},{},{:.2})"/>"#,
-                x,
-                y,
-                run,
-                px[0],
-                px[1],
-                px[2],
-                px[3] as f32 / 255.0
-            ));
-            svg.push('\n');
-            x += run;
-        }
+/// Minimal standard base64 encoder (avoids pulling in a dependency).
+fn base64_encode(data: &[u8]) -> String {
+    const TABLE: &[u8; 64] =
+        b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut out = String::with_capacity((data.len() + 2) / 3 * 4);
+    for chunk in data.chunks(3) {
+        let b0 = chunk[0] as u32;
+        let b1 = *chunk.get(1).unwrap_or(&0) as u32;
+        let b2 = *chunk.get(2).unwrap_or(&0) as u32;
+        let n = (b0 << 16) | (b1 << 8) | b2;
+        out.push(TABLE[(n >> 18 & 63) as usize] as char);
+        out.push(TABLE[(n >> 12 & 63) as usize] as char);
+        out.push(if chunk.len() > 1 {
+            TABLE[(n >> 6 & 63) as usize] as char
+        } else {
+            '='
+        });
+        out.push(if chunk.len() > 2 {
+            TABLE[(n & 63) as usize] as char
+        } else {
+            '='
+        });
     }
-
-    svg.push_str("</svg>");
-    svg
+    out
 }
 
 #[cfg(test)]

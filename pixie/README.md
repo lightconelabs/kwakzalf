@@ -24,30 +24,32 @@ pixie --emojis "🦆🎱" --text "duckeight" --color f4a030 -o logo.png
 ```
 
 By default the emoji is rendered **crisp** — full-detail, smoothly antialiased —
-so a clean vector icon sits next to a chunky pixel wordmark. The text is drawn
-with a bundled pixel font and a thin dark outline for a cohesive sticker look.
+and the tool name is set in a clean **smooth modern font** (Poppins), for a
+polished contemporary logo.
 
-Pass `--emoji-pixelate true` to pixelate the emoji too (one all-pixel-art
-aesthetic): the source artwork is supersampled, downscaled to a small logical
-grid, reduced to a flat limited palette (killing gradients), given a thin dark
-silhouette outline, and scaled up with nearest-neighbor for crisp square pixels.
-Simple, bold emoji pixelate well; fine-detail ones (e.g. a musical score) read
-better crisp.
+Pass `--emoji-pixelate true` for one all-pixel-art aesthetic: the emoji is
+supersampled, downscaled to a small logical grid, reduced to a flat limited
+palette (killing gradients), given a thin dark silhouette outline, and scaled up
+with nearest-neighbor for crisp square pixels — and the text automatically
+switches to the pixel font (Press Start 2P) with a matching outline. Simple, bold
+emoji pixelate well; fine-detail ones (e.g. a musical score) read better crisp.
+Force either text style with `--text-style smooth|pixel`.
 
 ### Options
 
 - `--emojis` — emoji characters to render
 - `--text` — text to display next to emojis
 - `--emoji-pixelate true|false` — pixelate the emoji instead of rendering it crisp (default: false)
+- `--text-style auto|smooth|pixel` — text rendering; auto = smooth with crisp emoji, pixel with pixelated (default: auto)
 - `--grid N` — logical pixels per emoji when pixelated, 8–128 (default: 28; smaller is chunkier)
 - `--zoom N` — output pixels per logical pixel, 1–32 (default: 5)
 - `--colors N` — palette size for emoji color reduction, 0 keeps source colors (default: 16)
 - `--outline true|false` — dark silhouette outline around pixelated emojis (default: true)
-- `--text-outline true|false` — dark outline around the text (default: true)
-- `--text-scale F` — text cap height as a fraction of the emoji box (default: 0.34)
-- `--tracking N` — extra letter spacing in logical pixels (default: 2)
+- `--text-outline true|false` — dark outline around pixel text (default: true)
+- `--text-scale F` — text size as a fraction of the emoji box height (default: mode-based)
+- `--tracking N` — extra letter spacing (default: mode-based)
 - `--color FFCC4D` — 6-digit text color hex (default: white)
-- `--format png|svg` — output format (default: png)
+- `--format png|svg` — output format; svg embeds the render as a data-URI PNG (default: png)
 - `--font path.ttf` — custom font override
 - `--sprites-dir path/` — custom sprite PNGs by emoji sequence codepoints, e.g. `1f986.png` or `1f1eb-1f1f7.png`
 - `-o path` — output file

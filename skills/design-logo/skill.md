@@ -7,11 +7,12 @@ description: Design a logo for a DuckEight tool using pixel art emojis and text
 
 You are designing a logo for a DuckEight tool. All DuckEight logos follow these brand constraints:
 
-- **Style:** A clean, full-detail emoji paired with a chunky pixel-art wordmark —
-  the crisp-icon / retro-type contrast. The text has a thin dark outline for a
-  cohesive sticker feel.
+- **Style:** A clean, full-detail emoji paired with a smooth modern wordmark
+  (Poppins) — polished and contemporary. (In all-pixel mode the wordmark switches
+  to a pixel font to match.)
 - **Composition:** One or more emojis + tool name text, arranged horizontally (emojis left, text right)
-- **Font:** Press Start 2P pixel font (bundled with pixie) or another pixel/mono font
+- **Font:** Poppins (bundled, default) for the smooth look; Press Start 2P for
+  the pixel look; or supply any font with `--font`
 - **Background:** Transparent
 - **Color:** Pick a text color that reads on both light and dark backgrounds and
   ties into the emoji palette (e.g. amber `f4c430`, green `7ac74f`). Avoid pure
@@ -62,6 +63,7 @@ pixie --emojis "🦆🎱" --text "duckeight" [OPTIONS] -o output.png
 
 Options:
   --emoji-pixelate t|f Pixelate the emoji instead of rendering it crisp (default: false)
+  --text-style S       auto | smooth | pixel (default: auto — smooth with crisp emoji)
   --grid N             Logical pixels per pixelated emoji, 8-128 (default: 28; smaller = chunkier)
   --zoom N             Output pixels per logical pixel, 1-32 (default: 5)
   --colors N           Palette size for emoji color reduction, 0 keeps source (default: 16)

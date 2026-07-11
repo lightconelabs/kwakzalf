@@ -2,10 +2,12 @@ use fontdue::{Font, FontSettings};
 use image::{imageops, Rgba, RgbaImage};
 use std::path::Path;
 
-const DEFAULT_FONT: &[u8] = include_bytes!("../fonts/PressStart2P-Regular.ttf");
+const PIXEL_FONT: &[u8] = include_bytes!("../fonts/PressStart2P-Regular.ttf");
+const SMOOTH_FONT: &[u8] = include_bytes!("../fonts/Poppins-SemiBold.ttf");
 
-/// Load font from path or use bundled default
-pub fn load_font(custom_path: Option<&Path>) -> Result<Font, String> {
+/// Load font from a custom path, or the bundled default for the chosen mode
+/// (Poppins for smooth text, Press Start 2P for pixel text).
+pub fn load_font(custom_path: Option<&Path>, smooth: bool) -> Result<Font, String> {
     match custom_path {
         Some(path) => {
             let data = std::fs::read(path)
@@ -13,8 +15,11 @@ pub fn load_font(custom_path: Option<&Path>) -> Result<Font, String> {
             Font::from_bytes(data, FontSettings::default())
                 .map_err(|err| format!("failed to parse font {}: {err}", path.display()))
         }
-        None => Font::from_bytes(DEFAULT_FONT, FontSettings::default())
-            .map_err(|err| format!("failed to parse bundled font: {err}")),
+        None => {
+            let data = if smooth { SMOOTH_FONT } else { PIXEL_FONT };
+            Font::from_bytes(data, FontSettings::default())
+                .map_err(|err| format!("failed to parse bundled font: {err}"))
+        }
     }
 }
 
@@ -40,20 +45,31 @@ fn detect_native_size(font: &Font, max_size: f32) -> f32 {
 /// Style options for text rendering.
 #[derive(Clone, Copy)]
 pub struct TextStyle {
-    /// Target cap height in output pixels.
+    /// Target text size in output pixels (font size for smooth, cap height for pixel).
     pub pixel_size: f32,
     /// Fill color.
     pub color: [u8; 3],
     /// Draw a dark outline (applied on the native grid so it scales crisply).
     pub outline: bool,
-    /// Extra logical-pixel gap between glyph cells (letter tracking).
+    /// Extra gap between glyphs (logical pixels for pixel text, output px for smooth).
     pub tracking: i32,
+    /// Render smoothly (antialiased) instead of on the pixel grid.
+    pub smooth: bool,
+}
+
+/// Render text to an image, dispatching to the smooth or pixel renderer.
+pub fn render_text(text: &str, font: &Font, style: TextStyle) -> RgbaImage {
+    if style.smooth {
+        render_text_smooth(text, font, style)
+    } else {
+        render_text_pixel(text, font, style)
+    }
 }
 
 /// Render text into an RgbaImage at the font's native pixel grid, then scale up
 /// with nearest-neighbor so pixels stay crisp. Outline (if enabled) is added on
 /// the native grid so it is a single logical pixel thick after scaling.
-pub fn render_text(text: &str, font: &Font, style: TextStyle) -> RgbaImage {
+fn render_text_pixel(text: &str, font: &Font, style: TextStyle) -> RgbaImage {
     let color = Rgba([style.color[0], style.color[1], style.color[2], 255]);
     let ink = Rgba([26u8, 24, 30, 255]);
 
@@ -125,6 +141,67 @@ pub fn render_text(text: &str, font: &Font, style: TextStyle) -> RgbaImage {
     } else {
         img
     }
+}
+
+/// Render text smoothly (antialiased) with a proportional font, for the clean
+/// modern look that pairs with crisp emoji. Supersampled then downscaled with
+/// Lanczos3 for extra-smooth edges.
+fn render_text_smooth(text: &str, font: &Font, style: TextStyle) -> RgbaImage {
+    let ss = 3.0f32; // supersample factor
+    let size = style.pixel_size * ss;
+    let tracking = style.tracking as f32 * ss;
+
+    // Use consistent line metrics so every glyph shares one baseline.
+    let line = font.horizontal_line_metrics(size);
+    let ascent = line.map(|m| m.ascent).unwrap_or(size * 0.8);
+    let descent = line.map(|m| m.descent).unwrap_or(-size * 0.2);
+
+    // Rasterize glyphs and measure the total advance.
+    let mut glyphs = Vec::new();
+    let mut total_w = 0.0f32;
+    for ch in text.chars() {
+        let (metrics, bitmap) = font.rasterize(ch, size);
+        total_w += metrics.advance_width + tracking;
+        glyphs.push((metrics, bitmap));
+    }
+    total_w -= tracking; // no trailing gap
+
+    let margin = (size * 0.12).ceil(); // breathing room for round glyph overshoot
+    let hi_w = (total_w + margin * 2.0).ceil().max(1.0) as u32;
+    let hi_h = (ascent - descent + margin * 2.0).ceil().max(1.0) as u32;
+    let mut hi = RgbaImage::new(hi_w, hi_h);
+
+    let [r, g, b] = style.color;
+    let baseline = ascent + margin;
+    let mut pen_x = margin;
+
+    for (metrics, bitmap) in &glyphs {
+        let gx = pen_x + metrics.xmin as f32;
+        let gy = baseline - (metrics.height as i32 + metrics.ymin) as f32;
+        for row in 0..metrics.height {
+            for col in 0..metrics.width {
+                let cov = bitmap[row * metrics.width + col];
+                if cov == 0 {
+                    continue;
+                }
+                let fx = (gx + col as f32) as i32;
+                let fy = (gy + row as f32) as i32;
+                if fx >= 0 && fy >= 0 && (fx as u32) < hi_w && (fy as u32) < hi_h {
+                    let px = hi.get_pixel_mut(fx as u32, fy as u32);
+                    // Keep the strongest coverage where glyphs overlap.
+                    if cov > px.0[3] {
+                        px.0 = [r, g, b, cov];
+                    }
+                }
+            }
+        }
+        pen_x += metrics.advance_width + tracking;
+    }
+
+    // Downscale to final size with a high-quality filter.
+    let out_w = ((hi_w as f32) / ss).round().max(1.0) as u32;
+    let out_h = ((hi_h as f32) / ss).round().max(1.0) as u32;
+    imageops::resize(&hi, out_w, out_h, imageops::FilterType::Lanczos3)
 }
 
 /// Add a 1px dark outline around the filled glyph pixels at native resolution.
