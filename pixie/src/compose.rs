@@ -1,5 +1,13 @@
 use image::{imageops, Rgba, RgbaImage};
 
+/// Visible gap between the tile and the wordmark, as a fraction of tile height.
+/// At the default `--text-scale` this lands on the wordmark's x-height, the
+/// conventional icon-to-wordmark measure for a horizontal lockup.
+const TEXT_GAP_RATIO: f32 = 0.31;
+
+/// Alpha above which a pixel counts as solid rather than shadow or antialiasing.
+const ALPHA_SOLID: u8 = 200;
+
 /// Options for the domino-style badge that houses the emoji.
 #[derive(Clone, Copy)]
 pub struct BadgeStyle {
@@ -9,25 +17,51 @@ pub struct BadgeStyle {
 
 /// Compose the emoji into a domino tile (one emoji per cell, split by dividers),
 /// then place the tile and text into a horizontal logo.
-pub fn compose_domino(
-    emojis: &[RgbaImage],
-    text: Option<&RgbaImage>,
-    padding: u32,
-    badge: &BadgeStyle,
-    gap: Option<u32>,
-) -> RgbaImage {
+pub fn compose_domino(emojis: &[RgbaImage], text: Option<&RgbaImage>, badge: &BadgeStyle) -> RgbaImage {
     let tile = build_domino(emojis, badge);
-    let shadow_pad = shadow_margin(&tile);
+    let margin = shadow_margin(&tile);
+    let gap = (tile.height() as f32 * TEXT_GAP_RATIO).round() as u32;
     let mark = with_shadow(&tile);
-    // `with_shadow` bakes a transparent margin around the tile, so the raw
-    // padding lands on top of it and the visible gap comes out that much wider.
-    // When an explicit gap is given, measure from the tile's visible edge by
-    // discounting that margin, so the number means what it says.
-    let padding = match gap {
-        Some(g) => g.saturating_sub(shadow_pad),
-        None => padding,
-    };
-    compose_horizontal(&[mark], text, padding)
+
+    // `gap` is the gap you can see, so discount what already sits inside it: the
+    // transparent margin `with_shadow` leaves around the tile, and the text
+    // image's own left bearing. Both used to stack on top of the padding, which
+    // is why the wordmark drifted away from the badge. Trim the bearing rather
+    // than subtract it, so the gap holds for any first glyph.
+    let text = text.map(trim_left);
+    let padding = gap.saturating_sub(margin);
+
+    // Match the trailing margin to the leading one so the lockup sits in an
+    // even frame rather than running up against the right edge.
+    pad_trailing(&compose_horizontal(&[mark], text.as_ref(), padding), margin)
+}
+
+/// Drop the transparent columns before the image's first solid pixel.
+fn trim_left(img: &RgbaImage) -> RgbaImage {
+    let bearing = (0..img.width())
+        .find(|&x| (0..img.height()).any(|y| img.get_pixel(x, y)[3] > ALPHA_SOLID))
+        .unwrap_or(0);
+    if bearing == 0 {
+        return img.clone();
+    }
+    let mut out = RgbaImage::new(img.width() - bearing, img.height());
+    imageops::overlay(&mut out, img, -(bearing as i64), 0);
+    out
+}
+
+/// Widen the canvas so its last solid pixel sits `margin` in from the right edge.
+fn pad_trailing(canvas: &RgbaImage, margin: u32) -> RgbaImage {
+    let last = (0..canvas.width())
+        .rev()
+        .find(|&x| (0..canvas.height()).any(|y| canvas.get_pixel(x, y)[3] > ALPHA_SOLID))
+        .unwrap_or(canvas.width().saturating_sub(1));
+    let have = canvas.width() - 1 - last;
+    if have >= margin {
+        return canvas.clone();
+    }
+    let mut out = RgbaImage::new(canvas.width() + margin - have, canvas.height());
+    imageops::overlay(&mut out, canvas, 0, 0);
+    out
 }
 
 /// Build the domino tile: a rounded 2:1 (or N:1) tile with an emoji centered in

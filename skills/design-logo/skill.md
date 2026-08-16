@@ -13,7 +13,12 @@ You are designing a logo for a DuckEight tool. All DuckEight logos follow these 
 - **Composition:** Two emojis in a domino badge + tool name text to the right.
   Pick exactly two emoji so each fills one cell of the domino.
 - **Font:** Nunito (bundled, default), or supply any font with `--font`
-- **Background:** Transparent
+- **Background:** Transparent, with an even margin of one shadow-width on all
+  four sides
+- **Spacing:** The badge-to-wordmark gap is fixed at the wordmark's x-height
+  (equivalently, the width of its `o`) — the usual icon-to-wordmark measure for
+  a horizontal lockup, and the same rule Google's Android brand uses. It is
+  computed, not a knob, so every house logo lines up.
 - **Color:** Pick a text color that reads on both light and dark backgrounds and
   ties into the emoji palette (e.g. amber `f4c430`, green `7ac74f`). Avoid pure
   white text — it vanishes on light README themes.
@@ -32,8 +37,8 @@ You are designing a logo for a DuckEight tool. All DuckEight logos follow these 
 4. **Generate the logo** using the `pixie` CLI:
 
 ```bash
-pixie --emojis "<two-emojis>" --text "<tool-name>" --color <hex> --gap 56 -o logos/<tool-name>-logo.png
-pixie --emojis "<two-emojis>" --text "<tool-name>" --color <hex> --gap 56 --format svg -o logos/<tool-name>-logo.svg
+pixie --emojis "<two-emojis>" --text "<tool-name>" --color <hex> -o logos/<tool-name>-logo.png
+pixie --emojis "<two-emojis>" --text "<tool-name>" --color <hex> --format svg -o logos/<tool-name>-logo.svg
 ```
 
 5. **Inspect the result** — read the PNG to view it. Check it on both a light and
@@ -65,11 +70,6 @@ Options:
   --color HEX          Text color, 6-digit hex (default: ffffff)
   --text-scale F       Text size as a fraction of the emoji box (default: 0.72)
   --tracking N         Extra letter spacing in pixels (default: 0)
-  --gap N              Gap from the badge's visible edge to the text, in pixels.
-                       Unset keeps the legacy spacing, which stacks the padding
-                       on top of the badge's transparent shadow margin and so
-                       runs ~20px wider than it looks. Around 68px reads well at
-                       the default --size.
   --font path.ttf      Custom font override
   --sprites-dir path/  Custom sprite PNGs (named by emoji codepoints)
   --format png|svg     Output format (default: png)
@@ -84,7 +84,7 @@ pixie --emojis "🦆🎱" --text "duckeight" --color f4a030 -o logos/duckeight-l
 
 Teleprompt logo:
 ```bash
-pixie --emojis "🎬🎙" --text "teleprompt" --color 3a86c8 --gap 56 -o logos/teleprompt-logo.png
+pixie --emojis "🎬🎙" --text "teleprompt" --color 3a86c8 -o logos/teleprompt-logo.png
 ```
 
 ## Gotchas
