@@ -9,16 +9,21 @@ You are designing a logo for a DuckEight tool. All DuckEight logos follow these 
 
 - **Style:** Two full-detail emoji housed in a **domino tile** (`--badge true`, the default)
   — a soft rounded plate split into two cells by a divider — paired with a smooth
-  modern wordmark (Nunito). Polished, self-contained, works on any background.
+  modern wordmark (IBM Plex Sans). Polished, self-contained, works on any background.
 - **Composition:** Two emojis in a domino badge + tool name text to the right.
   Pick exactly two emoji so each fills one cell of the domino.
-- **Font:** Nunito (bundled, default), or supply any font with `--font`
+- **Font:** IBM Plex Sans SemiBold (bundled, default), or supply any font with
+  `--font`. Flat terminals and an engineered feel — avoid rounded-terminal faces
+  (Nunito, Quicksand, Baloo) and very heavy weights, which read as children's
+  media rather than developer tooling. Note `--font` renders a variable font at
+  its default instance, so pass a static weight.
 - **Background:** Transparent, with an even margin of one shadow-width on all
   four sides
-- **Spacing:** The badge-to-wordmark gap is fixed at the wordmark's x-height
-  (equivalently, the width of its `o`) — the usual icon-to-wordmark measure for
-  a horizontal lockup, and the same rule Google's Android brand uses. It is
-  computed, not a knob, so every house logo lines up.
+- **Spacing:** The badge-to-wordmark gap is computed as 0.31x the tile height
+  (56px at the default `--size`), which sits between the wordmark's `o` width
+  and its x-height — the usual icon-to-wordmark measure for a horizontal
+  lockup, and the same rule Google's Android brand uses. It is computed, not a
+  knob, so every house logo lines up.
 - **Color:** Pick a text color that ties into the emoji palette and reads on both
   light and dark backgrounds. Avoid pure white — it vanishes on light README
   themes. Emoji colors are usually too light to use directly for text; deepen

@@ -27,7 +27,7 @@ Emoji are rendered crisp (full-detail, antialiased) and housed in a **domino
 tile** — a soft rounded plate split into one cell per emoji by a contrasting
 divider, with a gentle drop shadow — turning the pair into a single,
 self-contained mark that reads on any background. The tool name is set beside it
-in a clean modern font (Nunito). Works best with exactly two emoji.
+in a clean modern font (IBM Plex Sans). Works best with exactly two emoji.
 
 ### Options
 

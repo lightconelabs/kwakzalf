@@ -17,8 +17,10 @@ Domino bundles emoji SVG artwork under `emoji-svg/`, compiled into the binary.
 
 ## Text font
 
-- **Nunito** by Vernon Adams / Cyreal — the text font, instanced to ExtraBold,
-  licensed under the **SIL Open Font License 1.1** (`fonts/`).
+- **IBM Plex Sans** by IBM — the text font, instanced to SemiBold, licensed
+  under the **SIL Open Font License 1.1**. The full license text is included at
+  `fonts/LICENSE-IBM-PLEX-OFL.txt`. Copyright © 2017 IBM Corp. with Reserved
+  Font Name "Plex".
 
 ## Apple emoji
 

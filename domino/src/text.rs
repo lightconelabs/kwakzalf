@@ -2,9 +2,9 @@ use fontdue::{Font, FontSettings};
 use image::{imageops, RgbaImage};
 use std::path::Path;
 
-const DEFAULT_FONT: &[u8] = include_bytes!("../fonts/Nunito-ExtraBold.ttf");
+const DEFAULT_FONT: &[u8] = include_bytes!("../fonts/IBMPlexSans-SemiBold.ttf");
 
-/// Load font from a custom path, or the bundled default (Nunito ExtraBold).
+/// Load font from a custom path, or the bundled default (IBM Plex Sans SemiBold).
 pub fn load_font(custom_path: Option<&Path>) -> Result<Font, String> {
     let data = match custom_path {
         Some(path) => std::fs::read(path)
