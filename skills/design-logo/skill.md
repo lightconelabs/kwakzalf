@@ -19,9 +19,21 @@ You are designing a logo for a DuckEight tool. All DuckEight logos follow these 
   (equivalently, the width of its `o`) — the usual icon-to-wordmark measure for
   a horizontal lockup, and the same rule Google's Android brand uses. It is
   computed, not a knob, so every house logo lines up.
-- **Color:** Pick a text color that reads on both light and dark backgrounds and
-  ties into the emoji palette (e.g. amber `f4c430`, green `7ac74f`). Avoid pure
-  white text — it vanishes on light README themes.
+- **Color:** Pick a text color that ties into the emoji palette and reads on both
+  light and dark backgrounds. Avoid pure white — it vanishes on light README
+  themes. Emoji colors are usually too light to use directly for text; deepen
+  them until they hold on white (kwakzalf's teal is the soap bottle's `4fe8d8`
+  darkened to `1aa89b`).
+- **Palette:** No two tools share a wordmark color. Check a new pick against the
+  ones already taken, and keep it clearly distinct rather than a near-match:
+
+  | tool | color | |
+  | --- | --- | --- |
+  | duckeight | `f4a030` | amber |
+  | domino | `f4c430` | gold |
+  | kwakzalf | `1aa89b` | teal |
+  | primavera | `6cbf3f` | green |
+  | teleprompt | `3a86c8` | blue |
 - **Emoji artwork:** bundled emoji are Noto Emoji (detailed, shaded — the closest
   freely-licensable match to Apple's style). Apple's own emoji are proprietary
   and can't be bundled; to use genuine Apple artwork on your own machine, export
