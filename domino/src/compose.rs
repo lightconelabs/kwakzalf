@@ -13,15 +13,53 @@ const ALPHA_SOLID: u8 = 200;
 pub struct BadgeStyle {
     /// Tile fill color.
     pub fill: [u8; 3],
+    /// Drop shadow cast beneath the tile.
+    pub shadow: ShadowStyle,
+}
+
+/// How much shadow sits under the tile.
+#[derive(Clone, Copy, PartialEq)]
+pub enum ShadowStyle {
+    None,
+    Tight,
+    Soft,
+}
+
+impl ShadowStyle {
+    /// Margin and downward offset relative to tile height, blur relative to that
+    /// margin, and shadow opacity.
+    fn params(self) -> (f32, f32, f32, u8) {
+        match self {
+            Self::None => (0.10, 0.0, 0.0, 0),
+            Self::Tight => (0.10, 0.35, 0.020, 90),
+            Self::Soft => (0.22, 0.40, 0.050, 115),
+        }
+    }
+}
+
+/// Scale an image's saturation toward grey. `factor` of 1.0 leaves it untouched.
+pub fn desaturate(img: &RgbaImage, factor: f32) -> RgbaImage {
+    if (factor - 1.0).abs() < f32::EPSILON {
+        return img.clone();
+    }
+    let mut out = img.clone();
+    for px in out.pixels_mut() {
+        let [r, g, b, a] = px.0;
+        // Rec. 709 luma, so muting preserves each pixel's perceived brightness.
+        let luma = 0.2126 * r as f32 + 0.7152 * g as f32 + 0.0722 * b as f32;
+        let mix = |c: u8| (luma + (c as f32 - luma) * factor).clamp(0.0, 255.0) as u8;
+        px.0 = [mix(r), mix(g), mix(b), a];
+    }
+    out
 }
 
 /// Compose the emoji into a domino tile (one emoji per cell, split by dividers),
 /// then place the tile and text into a horizontal logo.
 pub fn compose_domino(emojis: &[RgbaImage], text: Option<&RgbaImage>, badge: &BadgeStyle) -> RgbaImage {
     let tile = build_domino(emojis, badge);
-    let margin = shadow_margin(&tile);
+    let margin = shadow_margin(&tile, badge.shadow);
     let gap = (tile.height() as f32 * TEXT_GAP_RATIO).round() as u32;
-    let mark = with_shadow(&tile);
+    let mark = with_shadow(&tile, badge.shadow);
 
     // `gap` is the gap you can see, so discount what already sits inside it: the
     // transparent margin `with_shadow` leaves around the tile, and the text
@@ -130,33 +168,38 @@ fn build_domino(emojis: &[RgbaImage], badge: &BadgeStyle) -> RgbaImage {
 }
 
 /// Width of the transparent margin `with_shadow` leaves around a tile.
-fn shadow_margin(tile: &RgbaImage) -> u32 {
-    (tile.height() as f32 * 0.22).round() as u32
+fn shadow_margin(tile: &RgbaImage, style: ShadowStyle) -> u32 {
+    let (margin, ..) = style.params();
+    (tile.height() as f32 * margin).round() as u32
 }
 
-/// Wrap a tile in a transparent canvas with a soft drop shadow beneath it.
-fn with_shadow(tile: &RgbaImage) -> RgbaImage {
-    let pad = shadow_margin(tile);
+/// Wrap a tile in a transparent canvas with a drop shadow beneath it.
+fn with_shadow(tile: &RgbaImage, style: ShadowStyle) -> RgbaImage {
+    let (_, blur, offset, alpha) = style.params();
+    let pad = shadow_margin(tile, style);
     let radius = (tile.height() as f32 * 0.2).round() as u32;
     let cw = tile.width() + pad * 2;
     let ch = tile.height() + pad * 2;
 
-    // Shadow silhouette, offset down slightly, then blurred.
-    let mut shadow = RgbaImage::new(cw, ch);
-    let dy = (tile.height() as f32 * 0.05).round() as u32;
-    fill_rounded(
-        &mut shadow,
-        pad,
-        pad + dy,
-        pad + tile.width() - 1,
-        pad + dy + tile.height() - 1,
-        radius,
-        Rgba([12, 14, 20, 115]),
-    );
-    let shadow = imageops::blur(&shadow, pad as f32 * 0.4);
-
     let mut canvas = RgbaImage::new(cw, ch);
-    imageops::overlay(&mut canvas, &shadow, 0, 0);
+
+    if alpha > 0 {
+        // Shadow silhouette, offset down slightly, then blurred.
+        let mut shadow = RgbaImage::new(cw, ch);
+        let dy = (tile.height() as f32 * offset).round() as u32;
+        fill_rounded(
+            &mut shadow,
+            pad,
+            pad + dy,
+            pad + tile.width() - 1,
+            pad + dy + tile.height() - 1,
+            radius,
+            Rgba([12, 14, 20, alpha]),
+        );
+        let shadow = imageops::blur(&shadow, pad as f32 * blur);
+        imageops::overlay(&mut canvas, &shadow, 0, 0);
+    }
+
     imageops::overlay(&mut canvas, tile, pad as i64, pad as i64);
     canvas
 }

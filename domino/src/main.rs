@@ -43,6 +43,14 @@ struct Cli {
     #[arg(long, default_value_t = 0)]
     tracking: i32,
 
+    /// Emoji saturation multiplier: 1.0 keeps the artwork as-is, lower mutes it
+    #[arg(long, default_value_t = 1.0)]
+    emoji_sat: f32,
+
+    /// Drop shadow under the badge
+    #[arg(long, default_value_t = Shadow::Soft, value_enum)]
+    shadow: Shadow,
+
     /// Custom font path for text
     #[arg(long)]
     font: Option<PathBuf>,
@@ -64,6 +72,26 @@ struct Cli {
 enum OutputFormat {
     Png,
     Svg,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, ValueEnum)]
+enum Shadow {
+    /// No shadow — the tile sits flat on the background.
+    None,
+    /// Tight contact shadow, close under the tile.
+    Tight,
+    /// Soft ambient shadow.
+    Soft,
+}
+
+impl fmt::Display for Shadow {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::None => write!(f, "none"),
+            Self::Tight => write!(f, "tight"),
+            Self::Soft => write!(f, "soft"),
+        }
+    }
 }
 
 impl fmt::Display for OutputFormat {
@@ -91,6 +119,7 @@ fn main() -> Result<(), String> {
             }
             img
         })
+        .map(|img| compose::desaturate(&img, cli.emoji_sat))
         .collect();
     if emoji_images.is_empty() {
         return Err("could not render any of the requested emoji sequences".to_string());
@@ -107,7 +136,14 @@ fn main() -> Result<(), String> {
         .transpose()?;
 
     let logo = if cli.badge {
-        let badge = BadgeStyle { fill: cli.badge_fill };
+        let badge = BadgeStyle {
+            fill: cli.badge_fill,
+            shadow: match cli.shadow {
+                Shadow::None => compose::ShadowStyle::None,
+                Shadow::Tight => compose::ShadowStyle::Tight,
+                Shadow::Soft => compose::ShadowStyle::Soft,
+            },
+        };
         compose::compose_domino(&emoji_images, text_img.as_ref(), &badge)
     } else {
         // Gap between the mark and the text scales with the emoji size.
