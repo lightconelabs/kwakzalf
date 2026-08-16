@@ -26,19 +26,23 @@ You are designing a logo for a DuckEight tool. All DuckEight logos follow these 
   knob, so every house logo lines up.
 - **Color:** Pick a text color that ties into the emoji palette and reads on both
   light and dark backgrounds. Avoid pure white — it vanishes on light README
-  themes. Emoji colors are usually too light to use directly for text; deepen
-  them until they hold on white (kwakzalf's teal is the soap bottle's `4fe8d8`
-  darkened to `1aa89b`).
-- **Palette:** No two tools share a wordmark color. Check a new pick against the
-  ones already taken, and keep it clearly distinct rather than a near-match:
+  themes. Keep it **muted**: saturation at or below ~0.6. Straight-from-the-emoji
+  hues are bright and fully saturated, and five of those side by side read as a
+  crayon box rather than a tool suite. Take the emoji's hue, then drop saturation
+  and settle the lightness until it clears roughly 3:1 on white *and* 3.5:1 on
+  dark — the old palette hit 10:1 on dark but 1.6:1 on white, which is why it
+  looked flat and shouty at once.
+- **Palette:** No two tools share a wordmark color. Desaturating compresses the
+  palette, so near-matches collide easily — check a new pick against the taken
+  ones and keep CIELAB ΔE above ~25 (the set's closest pair is currently 32):
 
-  | tool | color | |
-  | --- | --- | --- |
-  | duckeight | `f4a030` | amber |
-  | domino | `f4c430` | gold |
-  | kwakzalf | `1aa89b` | teal |
-  | primavera | `6cbf3f` | green |
-  | teleprompt | `3a86c8` | blue |
+  | tool | color | | sat |
+  | --- | --- | --- | --- |
+  | duckeight | `c2833a` | muted amber | 0.70 |
+  | kwakzalf | `3d8b84` | muted teal | 0.56 |
+  | primavera | `6b9550` | muted green | 0.46 |
+  | teleprompt | `4a7ea8` | muted steel blue | 0.56 |
+  | domino | `a85fa0` | muted orchid | 0.43 |
 - **Emoji artwork:** bundled emoji are Noto Emoji (detailed, shaded — the closest
   freely-licensable match to Apple's style). Apple's own emoji are proprietary
   and can't be bundled; to use genuine Apple artwork on your own machine, export
