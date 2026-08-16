@@ -14,14 +14,14 @@ claude plugin add github:lightconelabs/kwakzalf
 
 ### design-logo
 
-Design logos for `duckeight` tools using pixel art emojis and text. Uses the bundled `pixie` CLI to render emoji sprites and pixel fonts into PNG/SVG logos.
+Design logos for `duckeight` tools by housing two emoji in a domino tile beside a modern wordmark. Uses the bundled `domino` CLI to render emoji sprites and text into PNG/SVG logos.
 
-## Pixie CLI
+## Domino CLI
 
-A Rust-based emoji-to-pixel-art logo generator bundled with the plugin. See [pixie/README.md](pixie/README.md) for details.
+A Rust-based emoji logo generator bundled with the plugin. See [domino/README.md](domino/README.md) for details.
 
-To build pixie from source:
+To build domino from source:
 
 ```bash
-cd pixie && cargo build --release
+cd domino && cargo build --release
 ```

@@ -26,7 +26,7 @@ You are designing a logo for a DuckEight tool. All DuckEight logos follow these 
   freely-licensable match to Apple's style). Apple's own emoji are proprietary
   and can't be bundled; to use genuine Apple artwork on your own machine, export
   the glyphs as PNGs named by codepoint and pass `--sprites-dir` (see
-  `pixie/THIRD_PARTY_NOTICES.md`).
+  `domino/THIRD_PARTY_NOTICES.md`).
 
 ## Process
 
@@ -34,11 +34,11 @@ You are designing a logo for a DuckEight tool. All DuckEight logos follow these 
 2. **Discuss emoji choices** — pick 1-3 emojis that represent the tool. Keep it
    simple.
 3. **Confirm the tool name** text to display
-4. **Generate the logo** using the `pixie` CLI:
+4. **Generate the logo** using the `domino` CLI:
 
 ```bash
-pixie --emojis "<two-emojis>" --text "<tool-name>" --color <hex> -o logos/<tool-name>-logo.png
-pixie --emojis "<two-emojis>" --text "<tool-name>" --color <hex> --format svg -o logos/<tool-name>-logo.svg
+domino --emojis "<two-emojis>" --text "<tool-name>" --color <hex> -o logos/<tool-name>-logo.png
+domino --emojis "<two-emojis>" --text "<tool-name>" --color <hex> --format svg -o logos/<tool-name>-logo.svg
 ```
 
 5. **Inspect the result** — read the PNG to view it. Check it on both a light and
@@ -50,18 +50,18 @@ pixie --emojis "<two-emojis>" --text "<tool-name>" --color <hex> --format svg -o
 
 ## Prerequisites
 
-The `pixie` CLI must be installed. Build it from the plugin source:
+The `domino` CLI must be installed. Build it from the plugin source:
 
 ```bash
-cd ${CLAUDE_PLUGIN_ROOT}/pixie && cargo build --release
+cd ${CLAUDE_PLUGIN_ROOT}/domino && cargo build --release
 ```
 
-The binary will be at `${CLAUDE_PLUGIN_ROOT}/pixie/target/release/pixie`.
+The binary will be at `${CLAUDE_PLUGIN_ROOT}/domino/target/release/domino`.
 
-## Pixie CLI Reference
+## Domino CLI Reference
 
 ```
-pixie --emojis "🦆🎱" --text "duckeight" [OPTIONS] -o output.png
+domino --emojis "🦆🎱" --text "duckeight" [OPTIONS] -o output.png
 
 Options:
   --size N             Emoji box size in pixels (default: 150)
@@ -79,12 +79,12 @@ Options:
 
 DuckEight logo:
 ```bash
-pixie --emojis "🦆🎱" --text "duckeight" --color f4a030 -o logos/duckeight-logo.png
+domino --emojis "🦆🎱" --text "duckeight" --color f4a030 -o logos/duckeight-logo.png
 ```
 
 Teleprompt logo:
 ```bash
-pixie --emojis "🎬🎙" --text "teleprompt" --color 3a86c8 -o logos/teleprompt-logo.png
+domino --emojis "🎬🎙" --text "teleprompt" --color 3a86c8 -o logos/teleprompt-logo.png
 ```
 
 ## Gotchas

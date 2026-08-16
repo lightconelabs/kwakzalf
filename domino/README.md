@@ -1,6 +1,6 @@
-![pixie](../logos/pixie-logo.png)
+![domino](../logos/domino-logo.png)
 
-# Pixie
+# Domino
 
 Emoji logo generator.
 
@@ -20,7 +20,7 @@ cargo install --path .
 ## Usage
 
 ```bash
-pixie --emojis "🦆🎱" --text "duckeight" --color f4a030 -o logo.png
+domino --emojis "🦆🎱" --text "duckeight" --color f4a030 -o logo.png
 ```
 
 Emoji are rendered crisp (full-detail, antialiased) and housed in a **domino
@@ -44,4 +44,4 @@ in a clean modern font (Nunito). Works best with exactly two emoji.
 - `--format png|svg` — output format; svg embeds the render as a data-URI PNG (default: png)
 - `-o path` — output file
 
-See `pixie --help` for all options.
+See `domino --help` for all options.

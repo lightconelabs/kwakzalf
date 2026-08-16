@@ -1,5 +1,5 @@
 [package]
-name = "pixie"
+name = "domino"
 version = "0.1.0"
 edition = "2021"
 description = "Emoji-to-pixel-art logo generator"

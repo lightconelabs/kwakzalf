@@ -9,7 +9,7 @@ mod text;
 use compose::BadgeStyle;
 
 #[derive(Parser)]
-#[command(name = "pixie", about = "Emoji logo generator")]
+#[command(name = "domino", about = "Emoji logo generator")]
 struct Cli {
     /// Emoji characters to render (two work best with the domino badge)
     #[arg(long)]

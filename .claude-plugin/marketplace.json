@@ -5,19 +5,19 @@
     "name": "Lightcone Labs",
     "email": "info@lightconelabs.com"
   },
-  "description": "Agent skills for DuckEight tools — logo design with pixel art emojis",
+  "description": "Agent skills for DuckEight tools — logo design with emoji domino-tile badges",
   "plugins": [
     {
       "name": "kwakzalf",
       "source": "./",
-      "description": "Logo design with pixel art emojis using the pixie CLI",
+      "description": "Logo design with emoji domino-tile badges using the domino CLI",
       "version": "0.1.0",
       "author": {
         "name": "Lightcone Labs"
       },
       "license": "MIT",
       "category": "design",
-      "tags": ["pixel-art", "logo", "emoji", "duckeight"]
+      "tags": ["domino", "logo", "emoji", "duckeight"]
     }
   ]
 }

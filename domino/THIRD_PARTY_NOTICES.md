@@ -2,7 +2,7 @@
 
 ## Emoji artwork
 
-Pixie bundles emoji SVG artwork under `emoji-svg/`, compiled into the binary.
+Domino bundles emoji SVG artwork under `emoji-svg/`, compiled into the binary.
 
 - **Noto Emoji** — the large majority of the bundled emoji (and all country
   flags) come from Google's [Noto Emoji](https://github.com/googlefonts/noto-emoji)
@@ -24,10 +24,10 @@ Pixie bundles emoji SVG artwork under `emoji-svg/`, compiled into the binary.
 
 Apple Color Emoji is **proprietary** and is intentionally **not** bundled. To
 render logos with genuine Apple artwork on a machine you own (e.g. macOS), export
-the glyphs you need as PNGs named by codepoint and point Pixie at them:
+the glyphs you need as PNGs named by codepoint and point Domino at them:
 
 ```bash
-pixie --emojis "🦆🎱" --text "duckeight" --color f4a030 \
+domino --emojis "🦆🎱" --text "duckeight" --color f4a030 \
       --sprites-dir ./apple-sprites -o logo.png
 # ./apple-sprites/1f986.png, ./apple-sprites/1f3b1.png, ...
 ```
