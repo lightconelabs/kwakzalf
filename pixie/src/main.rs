@@ -43,6 +43,10 @@ struct Cli {
     #[arg(long, default_value_t = 0)]
     tracking: i32,
 
+    /// Gap between the badge's visible edge and the text, in pixels
+    #[arg(long)]
+    gap: Option<u32>,
+
     /// Custom font path for text
     #[arg(long)]
     font: Option<PathBuf>,
@@ -110,7 +114,7 @@ fn main() -> Result<(), String> {
     let padding = (cli.size as f32 * 0.28).round() as u32;
     let logo = if cli.badge {
         let badge = BadgeStyle { fill: cli.badge_fill };
-        compose::compose_domino(&emoji_images, text_img.as_ref(), padding, &badge)
+        compose::compose_domino(&emoji_images, text_img.as_ref(), padding, &badge, cli.gap)
     } else {
         compose::compose_horizontal(&emoji_images, text_img.as_ref(), padding)
     };

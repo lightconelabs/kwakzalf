@@ -14,9 +14,19 @@ pub fn compose_domino(
     text: Option<&RgbaImage>,
     padding: u32,
     badge: &BadgeStyle,
+    gap: Option<u32>,
 ) -> RgbaImage {
     let tile = build_domino(emojis, badge);
+    let shadow_pad = shadow_margin(&tile);
     let mark = with_shadow(&tile);
+    // `with_shadow` bakes a transparent margin around the tile, so the raw
+    // padding lands on top of it and the visible gap comes out that much wider.
+    // When an explicit gap is given, measure from the tile's visible edge by
+    // discounting that margin, so the number means what it says.
+    let padding = match gap {
+        Some(g) => g.saturating_sub(shadow_pad),
+        None => padding,
+    };
     compose_horizontal(&[mark], text, padding)
 }
 
@@ -85,9 +95,14 @@ fn build_domino(emojis: &[RgbaImage], badge: &BadgeStyle) -> RgbaImage {
     tile
 }
 
+/// Width of the transparent margin `with_shadow` leaves around a tile.
+fn shadow_margin(tile: &RgbaImage) -> u32 {
+    (tile.height() as f32 * 0.22).round() as u32
+}
+
 /// Wrap a tile in a transparent canvas with a soft drop shadow beneath it.
 fn with_shadow(tile: &RgbaImage) -> RgbaImage {
-    let pad = (tile.height() as f32 * 0.22).round() as u32;
+    let pad = shadow_margin(tile);
     let radius = (tile.height() as f32 * 0.2).round() as u32;
     let cw = tile.width() + pad * 2;
     let ch = tile.height() + pad * 2;

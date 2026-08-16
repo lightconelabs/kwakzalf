@@ -7,7 +7,7 @@ description: Design a logo for a DuckEight tool using emoji in a domino badge an
 
 You are designing a logo for a DuckEight tool. All DuckEight logos follow these brand constraints:
 
-- **Style:** Two full-detail emoji housed in a **domino tile** (`--badge domino`)
+- **Style:** Two full-detail emoji housed in a **domino tile** (`--badge true`, the default)
   — a soft rounded plate split into two cells by a divider — paired with a smooth
   modern wordmark (Nunito). Polished, self-contained, works on any background.
 - **Composition:** Two emojis in a domino badge + tool name text to the right.
@@ -32,8 +32,8 @@ You are designing a logo for a DuckEight tool. All DuckEight logos follow these 
 4. **Generate the logo** using the `pixie` CLI:
 
 ```bash
-pixie --emojis "<two-emojis>" --text "<tool-name>" --color <hex> --badge domino -o logos/<tool-name>-logo.png
-pixie --emojis "<two-emojis>" --text "<tool-name>" --color <hex> --badge domino --format svg -o logos/<tool-name>-logo.svg
+pixie --emojis "<two-emojis>" --text "<tool-name>" --color <hex> --gap 56 -o logos/<tool-name>-logo.png
+pixie --emojis "<two-emojis>" --text "<tool-name>" --color <hex> --gap 56 --format svg -o logos/<tool-name>-logo.svg
 ```
 
 5. **Inspect the result** — read the PNG to view it. Check it on both a light and
@@ -65,6 +65,11 @@ Options:
   --color HEX          Text color, 6-digit hex (default: ffffff)
   --text-scale F       Text size as a fraction of the emoji box (default: 0.72)
   --tracking N         Extra letter spacing in pixels (default: 0)
+  --gap N              Gap from the badge's visible edge to the text, in pixels.
+                       Unset keeps the legacy spacing, which stacks the padding
+                       on top of the badge's transparent shadow margin and so
+                       runs ~20px wider than it looks. Around 68px reads well at
+                       the default --size.
   --font path.ttf      Custom font override
   --sprites-dir path/  Custom sprite PNGs (named by emoji codepoints)
   --format png|svg     Output format (default: png)
@@ -76,3 +81,14 @@ DuckEight logo:
 ```bash
 pixie --emojis "🦆🎱" --text "duckeight" --color f4a030 -o logos/duckeight-logo.png
 ```
+
+Teleprompt logo:
+```bash
+pixie --emojis "🎬🎙" --text "teleprompt" --color 3a86c8 --gap 56 -o logos/teleprompt-logo.png
+```
+
+## Gotchas
+
+- **Strip variation selectors.** Sprites are named by base codepoint, so an
+  emoji carrying U+FE0F (🗣️, 🎙️, 🎞️) fails to resolve with "could not render
+  emoji". Pass the bare glyph (🗣, 🎙, 🎞) instead.
